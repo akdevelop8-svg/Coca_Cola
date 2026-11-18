@@ -45,9 +45,14 @@ export function TeamPage() {
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1);
   const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null);
 
+  const [loadError, setLoadError] = useState('');
+
   useEffect(() => {
     apiFetch<TeamResponse>('/api/team')
       .then(setData)
+      .catch((err: any) => {
+        setLoadError(err?.message || 'Unable to load team details right now.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -95,6 +100,12 @@ export function TeamPage() {
             />
           </div>
         </div>
+
+        {loadError && (
+          <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Three Summary Cards */}
         <div className="grid grid-cols-3 gap-2.5 sm:gap-4">

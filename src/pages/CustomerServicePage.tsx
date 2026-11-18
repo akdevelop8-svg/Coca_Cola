@@ -26,6 +26,8 @@ export function CustomerServicePage() {
     try {
       const res = await apiFetch<{ tickets: SupportTicket[] }>('/api/support/tickets');
       setTickets(res.tickets);
+    } catch (err: any) {
+      setError(err?.message || 'Unable to load support tickets right now.');
     } finally {
       setLoading(false);
     }
@@ -59,12 +61,17 @@ export function CustomerServicePage() {
   const handleReply = async (ticketId: string) => {
     const text = replyText[ticketId]?.trim();
     if (!text) return;
-    await apiFetch(`/api/support/tickets/${ticketId}/reply`, {
-      method: 'POST',
-      body: JSON.stringify({ message: text }),
-    });
-    setReplyText((prev) => ({ ...prev, [ticketId]: '' }));
-    await loadTickets();
+    setError('');
+    try {
+      await apiFetch(`/api/support/tickets/${ticketId}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ message: text }),
+      });
+      setReplyText((prev) => ({ ...prev, [ticketId]: '' }));
+      await loadTickets();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send reply.');
+    }
   };
 
   return (

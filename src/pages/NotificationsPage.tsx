@@ -20,6 +20,8 @@ export function NotificationsPage() {
     try {
       const res = await apiFetch<{ notifications: NotificationItem[] }>('/api/notifications');
       setItems(res.notifications);
+    } catch {
+      // keep existing notifications cleanly on transient failure
     } finally {
       setLoading(false);
     }

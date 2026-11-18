@@ -49,6 +49,8 @@ export function BankAccountPage() {
           pmRes.payoutMethods.some((m) => m.id === prev) ? prev : pmRes.payoutMethods[0].id
         );
       }
+    } catch (err: any) {
+      setError(err?.message || 'Unable to load payout account details right now.');
     } finally {
       setLoading(false);
     }

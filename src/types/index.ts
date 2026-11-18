@@ -52,7 +52,8 @@ export interface DemoCreditTransaction {
     | 'gift_code'
     | 'plan_purchase'
     | 'daily_mining_claim'
-    | 'referral_reward';
+    | 'referral_reward'
+    | 'task_reward';
   amountSigned: number;
   balanceAfter: number;
   referenceId: string | null;

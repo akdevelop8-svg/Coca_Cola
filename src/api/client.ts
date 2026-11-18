@@ -45,14 +45,32 @@ export async function apiFetch<T = any>(
     setFallbackSessionToken(null);
   }
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      ...options,
-      headers,
-      credentials: 'include',
-    });
-  } catch {
+  const method = (options.method || 'GET').toUpperCase();
+  const isIdempotent = method === 'GET' || method === 'HEAD';
+  const maxAttempts = isIdempotent ? 3 : 1;
+
+  let res: Response | null = null;
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (options.signal?.aborted) break;
+    try {
+      res = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+      });
+      lastError = null;
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts && !options.signal?.aborted) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 350));
+        continue;
+      }
+    }
+  }
+
+  if (!res || lastError) {
     throw new ApiError('Network connection error. Please check your connection and try again.', 0);
   }
 

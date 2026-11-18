@@ -453,13 +453,17 @@ export function AdminDashboardPage() {
 
   const handleToggleMethod = async (m: PaymentMethodRecord) => {
     setErrorMsg('');
-    await apiFetch(`/api/admin/payment-methods/${m.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ isActive: !m.isActive }),
-    });
-    await refreshConfig();
-    await loadTab('payment_methods');
-    setStatusMsg(`Payment method "${m.name}" ${!m.isActive ? 'enabled' : 'disabled'}.`);
+    try {
+      await apiFetch(`/api/admin/payment-methods/${m.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: !m.isActive }),
+      });
+      await refreshConfig();
+      await loadTab('payment_methods');
+      setStatusMsg(`Payment method "${m.name}" ${!m.isActive ? 'enabled' : 'disabled'}.`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to update payment method.');
+    }
   };
 
   const handleStartEditMethod = (m: PaymentMethodRecord) => {
@@ -492,10 +496,14 @@ export function AdminDashboardPage() {
   const handleDeleteMethod = async (m: PaymentMethodRecord) => {
     setErrorMsg('');
     setStatusMsg('');
-    await apiFetch(`/api/admin/payment-methods/${m.id}`, { method: 'DELETE' });
-    await refreshConfig();
-    await loadTab('payment_methods');
-    setStatusMsg(`Payment method "${m.name}" deleted.`);
+    try {
+      await apiFetch(`/api/admin/payment-methods/${m.id}`, { method: 'DELETE' });
+      await refreshConfig();
+      await loadTab('payment_methods');
+      setStatusMsg(`Payment method "${m.name}" deleted.`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to delete payment method.');
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -854,13 +862,18 @@ export function AdminDashboardPage() {
                           <button
                             type="button"
                             onClick={async () => {
-                              const next = u.status === 'active' ? 'suspended' : 'active';
-                              await apiFetch(`/api/admin/users/${u.id}/status`, {
-                                method: 'POST',
-                                body: JSON.stringify({ status: next, reason: 'Admin status toggle' }),
-                              });
-                              setStatusMsg(`Customer ${u.phone} ${next}.`);
-                              await loadTab('customers');
+                              setErrorMsg('');
+                              try {
+                                const next = u.status === 'active' ? 'suspended' : 'active';
+                                await apiFetch(`/api/admin/users/${u.id}/status`, {
+                                  method: 'POST',
+                                  body: JSON.stringify({ status: next, reason: 'Admin status toggle' }),
+                                });
+                                setStatusMsg(`Customer ${u.phone} ${next}.`);
+                                await loadTab('customers');
+                              } catch (err: any) {
+                                setErrorMsg(err?.message || 'Failed to update customer status.');
+                              }
                             }}
                             className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${
                               u.status === 'active'
@@ -1855,9 +1868,14 @@ export function AdminDashboardPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            await apiFetch(`/api/admin/channels/${ch.id}`, { method: 'DELETE' });
-                            await refreshConfig();
-                            await loadTab('payment_methods');
+                            setErrorMsg('');
+                            try {
+                              await apiFetch(`/api/admin/channels/${ch.id}`, { method: 'DELETE' });
+                              await refreshConfig();
+                              await loadTab('payment_methods');
+                            } catch (err: any) {
+                              setErrorMsg(err?.message || 'Failed to delete channel.');
+                            }
                           }}
                           className="text-red-600 font-semibold cursor-pointer"
                         >

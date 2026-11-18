@@ -105,6 +105,8 @@ export function IncomePage() {
         return 'Daily Mining Claim';
       case 'referral_reward':
         return 'Referral Reward';
+      case 'task_reward':
+        return 'Team Task Reward';
       default:
         return type;
     }

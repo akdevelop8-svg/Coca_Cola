@@ -40,6 +40,8 @@ export function WithdrawPage() {
       setSummary(sRes);
       setPayoutAccount(pRes.account);
       setWithdrawals(wRes.withdrawals);
+    } catch (err: any) {
+      setError(err?.message || 'Unable to load withdrawal details right now.');
     } finally {
       setLoading(false);
     }

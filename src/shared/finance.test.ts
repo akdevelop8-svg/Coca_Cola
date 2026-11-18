@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INVESTMENT_PLANS, DEFAULT_PLATFORM_SETTINGS, DEFAULT_SUPPORT_CHANNELS } from './constants';
+import { INVESTMENT_PLANS, DEFAULT_PLATFORM_SETTINGS, DEFAULT_SUPPORT_CHANNELS, TEAM_VALUE_TASKS } from './constants';
 import {
   formatBr,
   formatDemoCredits,
@@ -9,6 +9,7 @@ import {
   getEthiopiaCalendarDate,
   ethiopiaDateDiffDays,
   computePlanProgress,
+  computeTeamTaskLevels,
   canPurchaseDemoPlan,
   evaluateGiftCodeEligibility,
   calculateReferralDemoRewards,
@@ -184,4 +185,29 @@ test('normalizeLoginPhoneIdentifier handles customer phones and admin phone +251
   assert.equal(normalizeLoginPhoneIdentifier('0911223344'), '+251911223344');
   assert.equal(normalizeLoginPhoneIdentifier('+25190909090'), '+25190909090');
   assert.equal(normalizeLoginPhoneIdentifier('+251 90909090'), '+25190909090');
+});
+
+test('computeTeamTaskLevels evaluates L1+L2 deposit milestones with full rewards and zero deductions', () => {
+  const res = computeTeamTaskLevels(60000, TEAM_VALUE_TASKS, ['val_1']);
+  assert.equal(res.verifiedDepositsTotal, 60000);
+  assert.equal(res.maxTarget, 300000);
+  assert.equal(res.overallPercent, 20);
+  assert.equal(res.valueTasks.length, 5);
+
+  // Level 1: 25,000 target reached & claimed -> +1,500 full reward
+  assert.equal(res.valueTasks[0].eligible, true);
+  assert.equal(res.valueTasks[0].claimed, true);
+  assert.equal(res.valueTasks[0].remaining, 0);
+  assert.equal(res.valueTasks[0].rewardAmount, 1500);
+
+  // Level 2: 50,000 target reached & unclaimed -> ready to claim +3,000
+  assert.equal(res.valueTasks[1].eligible, true);
+  assert.equal(res.valueTasks[1].claimed, false);
+  assert.equal(res.valueTasks[1].percent, 100);
+  assert.equal(res.valueTasks[1].rewardAmount, 3000);
+
+  // Level 3: 100,000 target -> 40,000 remaining, locked
+  assert.equal(res.valueTasks[2].eligible, false);
+  assert.equal(res.valueTasks[2].remaining, 40000);
+  assert.equal(res.valueTasks[2].percent, 60);
 });

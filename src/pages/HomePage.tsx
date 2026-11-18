@@ -94,6 +94,8 @@ export function HomePage() {
         refreshConfig(),
       ]);
       setSummary(data);
+    } catch {
+      // keep existing state cleanly on transient failure
     } finally {
       setLoadingSummary(false);
     }

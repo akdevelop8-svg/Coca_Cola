@@ -718,7 +718,7 @@ export function getUserDemoWallet(userId: string) {
       `SELECT
         COALESCE(SUM(amount_signed), 0) as demo_balance,
         COALESCE(SUM(CASE WHEN type = 'daily_mining_claim' THEN amount_signed ELSE 0 END), 0) as demo_total_earnings,
-        COALESCE(SUM(CASE WHEN type IN ('registration_bonus', 'daily_checkin', 'gift_code') THEN amount_signed ELSE 0 END), 0) as demo_total_rewards,
+        COALESCE(SUM(CASE WHEN type IN ('registration_bonus', 'daily_checkin', 'gift_code', 'task_reward') THEN amount_signed ELSE 0 END), 0) as demo_total_rewards,
         COALESCE(SUM(CASE WHEN type = 'referral_reward' THEN amount_signed ELSE 0 END), 0) as demo_team_commission
        FROM demo_credit_transactions WHERE user_id = ?`
     )
@@ -746,7 +746,8 @@ export function appendDemoTransaction(params: {
     | 'gift_code'
     | 'plan_purchase'
     | 'daily_mining_claim'
-    | 'referral_reward';
+    | 'referral_reward'
+    | 'task_reward';
   amountSigned: number;
   referenceId?: string | null;
   note: string;

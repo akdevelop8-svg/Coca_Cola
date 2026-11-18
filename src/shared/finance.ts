@@ -374,3 +374,64 @@ export function normalizeLoginPhoneIdentifier(raw: string): string {
   }
   return trimmed;
 }
+
+export interface TeamTaskLevelDef {
+  id: string;
+  level: number;
+  targetAmount: number;
+  rewardAmount: number;
+}
+
+export interface TeamTaskLevelProgress extends TeamTaskLevelDef {
+  progress: number;
+  remaining: number;
+  percent: number;
+  eligible: boolean;
+  claimed: boolean;
+}
+
+export function computeTeamTaskLevels(
+  verifiedDepositsTotal: number,
+  tasks: readonly TeamTaskLevelDef[],
+  claimedTaskIds: ReadonlySet<string> | readonly string[]
+): {
+  verifiedDepositsTotal: number;
+  maxTarget: number;
+  overallPercent: number;
+  valueTasks: TeamTaskLevelProgress[];
+} {
+  const safeTotal =
+    Number.isFinite(verifiedDepositsTotal) && verifiedDepositsTotal > 0
+      ? Math.round(verifiedDepositsTotal * 100) / 100
+      : 0;
+  const claimedSet =
+    claimedTaskIds instanceof Set ? claimedTaskIds : new Set(claimedTaskIds);
+  const maxTarget = tasks.length > 0 ? tasks[tasks.length - 1].targetAmount : 300000;
+  const overallPercent =
+    maxTarget > 0 ? Math.min(100, Math.round((safeTotal / maxTarget) * 100)) : 0;
+
+  const valueTasks = tasks.map((t) => {
+    const progress = Math.min(safeTotal, t.targetAmount);
+    const remaining = Math.max(0, Math.round((t.targetAmount - safeTotal) * 100) / 100);
+    const percent =
+      t.targetAmount > 0 ? Math.min(100, Math.round((safeTotal / t.targetAmount) * 100)) : 0;
+    const eligible = safeTotal >= t.targetAmount;
+    const claimed = claimedSet.has(t.id);
+    return {
+      ...t,
+      progress,
+      remaining,
+      percent,
+      eligible,
+      claimed,
+    };
+  });
+
+  return {
+    verifiedDepositsTotal: safeTotal,
+    maxTarget,
+    overallPercent,
+    valueTasks,
+  };
+}
+

@@ -33,7 +33,6 @@ import {
   COMPANY_INFO,
   DEFAULT_PLATFORM_SETTINGS,
   INVESTMENT_PLANS,
-  TEAM_COUNT_TASKS,
   TEAM_VALUE_TASKS,
 } from '../src/shared/constants';
 import {
@@ -41,6 +40,7 @@ import {
   calculateWithdrawalBreakdown,
   canPurchaseDemoPlan,
   computePlanProgress,
+  computeTeamTaskLevels,
   DEMO_DAILY_CHECKIN_AMOUNT,
   DEMO_REGISTRATION_BONUS,
   evaluateGiftCodeEligibility,
@@ -1067,82 +1067,117 @@ export function createApiRouter() {
   });
 
   // ---------------------------------------------------------------------------
-  // TASKS (BOTH COUNT-BASED & VALUE-BASED MILESTONES KEPT SEPARATE)
+  // TASKS (L1 + L2 VERIFIED CBE DEPOSIT MILESTONES — ZERO DEDUCTIONS)
   // ---------------------------------------------------------------------------
+  function getVerifiedL1L2DepositsTotal(userId: string): number {
+    const l1Ids = (
+      db.prepare('SELECT id FROM users WHERE invited_by_user_id = ?').all(userId) as Array<{ id: string }>
+    ).map((u) => u.id);
+    if (l1Ids.length === 0) return 0;
+
+    const l2Ids = (
+      db
+        .prepare(`SELECT id FROM users WHERE invited_by_user_id IN (${l1Ids.map(() => '?').join(',')})`)
+        .all(...l1Ids) as Array<{ id: string }>
+    ).map((u) => u.id);
+
+    const l1L2Ids = [...l1Ids, ...l2Ids];
+    const row = db
+      .prepare(
+        `SELECT COALESCE(SUM(amount), 0) as total
+         FROM deposits
+         WHERE user_id IN (${l1L2Ids.map(() => '?').join(',')})
+           AND status = 'approved'`
+      )
+      .get(...l1L2Ids) as { total: number };
+
+    return Math.round((row.total || 0) * 100) / 100;
+  }
+
   router.get('/tasks', requireAuth, (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
-    const l1 = db.prepare('SELECT id FROM users WHERE invited_by_user_id = ?').all(userId) as Array<{ id: string }>;
-    const l1Ids = l1.map((u) => u.id);
-    const l2Ids = l1Ids.length
-      ? (
-          db
-            .prepare(`SELECT id FROM users WHERE invited_by_user_id IN (${l1Ids.map(() => '?').join(',')})`)
-            .all(...l1Ids) as Array<{ id: string }>
-        ).map((u) => u.id)
-      : [];
-    const l3Ids = l2Ids.length
-      ? (
-          db
-            .prepare(`SELECT id FROM users WHERE invited_by_user_id IN (${l2Ids.map(() => '?').join(',')})`)
-            .all(...l2Ids) as Array<{ id: string }>
-        ).map((u) => u.id)
-      : [];
-
-    const allTeamIds = [...l1Ids, ...l2Ids, ...l3Ids];
-    let qualifyingPurchasesCount = 0;
-    let qualifyingPurchasesVolume = 0;
-
-    if (allTeamIds.length > 0) {
-      const agg = db
-        .prepare(
-          `SELECT COUNT(DISTINCT user_id) as members, COALESCE(SUM(amount), 0) as volume
-           FROM plan_purchases WHERE user_id IN (${allTeamIds.map(() => '?').join(',')})`
-        )
-        .get(...allTeamIds) as { members: number; volume: number };
-      qualifyingPurchasesCount = agg.members;
-      qualifyingPurchasesVolume = agg.volume;
-    }
-
+    const verifiedDepositsTotal = getVerifiedL1L2DepositsTotal(userId);
     const claimedRows = db
       .prepare('SELECT task_id FROM task_claims WHERE user_id = ?')
       .all(userId) as Array<{ task_id: string }>;
     const claimedSet = new Set(claimedRows.map((r) => r.task_id));
 
+    const summary = computeTeamTaskLevels(verifiedDepositsTotal, TEAM_VALUE_TASKS, claimedSet);
+
     res.json({
-      qualifyingPurchasesCount,
-      qualifyingPurchasesVolume,
-      complianceApproved: isComplianceApproved(),
-      countTasks: TEAM_COUNT_TASKS.map((t) => ({
-        ...t,
-        progress: Math.min(qualifyingPurchasesCount, t.targetCount),
-        eligible: qualifyingPurchasesCount >= t.targetCount,
-        claimed: claimedSet.has(t.id),
-      })),
-      valueTasks: TEAM_VALUE_TASKS.map((t) => ({
-        ...t,
-        progress: Math.min(qualifyingPurchasesVolume, t.targetAmount),
-        remaining: Math.max(0, t.targetAmount - qualifyingPurchasesVolume),
-        eligible: qualifyingPurchasesVolume >= t.targetAmount,
-        claimed: claimedSet.has(t.id),
-      })),
+      ...summary,
+      qualifyingPurchasesVolume: summary.verifiedDepositsTotal,
     });
   });
 
   router.post('/tasks/claim', requireAuth, (req: AuthenticatedRequest, res) => {
-    if (!isComplianceApproved()) {
-      res.status(403).json({
-        error: 'Task reward payouts are disabled pending compliance approval (COMPLIANCE_APPROVED=false).',
+    const userId = req.authUser!.id;
+    const { taskId } = req.body || {};
+    const task = TEAM_VALUE_TASKS.find((t) => t.id === taskId);
+    if (!task) {
+      res.status(400).json({ error: 'Unknown task level ID.' });
+      return;
+    }
+
+    const verifiedDepositsTotal = getVerifiedL1L2DepositsTotal(userId);
+    if (verifiedDepositsTotal < task.targetAmount) {
+      res.status(400).json({
+        error: `Level ${task.level} target (ETB ${task.targetAmount.toLocaleString('en-US')}) has not been reached yet.`,
       });
       return;
     }
-    const { taskId } = req.body || {};
-    const valTask = TEAM_VALUE_TASKS.find((t) => t.id === taskId);
-    const cntTask = TEAM_COUNT_TASKS.find((t) => t.id === taskId);
-    if (!valTask && !cntTask) {
-      res.status(400).json({ error: 'Unknown task ID.' });
-      return;
+
+    const now = new Date().toISOString();
+    try {
+      let nextBalance = 0;
+      const tx = db.transaction(() => {
+        const alreadyClaimed = db
+          .prepare('SELECT id FROM task_claims WHERE user_id = ? AND task_id = ?')
+          .get(userId, task.id);
+        if (alreadyClaimed) {
+          throw new Error('ALREADY_CLAIMED');
+        }
+
+        db.prepare(
+          `INSERT INTO task_claims (id, user_id, task_id, amount, created_at)
+           VALUES (?, ?, ?, ?, ?)`
+        ).run(`tcl_${crypto.randomUUID()}`, userId, task.id, task.rewardAmount, now);
+
+        nextBalance = appendDemoTransaction({
+          userId,
+          type: 'task_reward',
+          amountSigned: task.rewardAmount,
+          referenceId: task.id,
+          note: `Team Task Level ${task.level} Reward (+ETB ${task.rewardAmount.toLocaleString('en-US')})`,
+          idempotencyKey: `task_claim:${userId}:${task.id}`,
+          createdAt: now,
+        });
+
+        createNotification(
+          userId,
+          `Level ${task.level} Task Reward Settled`,
+          `+ETB ${task.rewardAmount.toLocaleString('en-US')} has been credited to your wallet without any deductions.`,
+          'task_reward',
+          '/income'
+        );
+      });
+      tx();
+
+      res.json({
+        ok: true,
+        taskId: task.id,
+        level: task.level,
+        rewardAmount: task.rewardAmount,
+        demoBalance: nextBalance,
+        message: `Level ${task.level} reward (+ETB ${task.rewardAmount.toLocaleString('en-US')}) settled and credited to your wallet.`,
+      });
+    } catch (err: any) {
+      if (err?.message === 'ALREADY_CLAIMED') {
+        res.status(409).json({ error: `Level ${task.level} reward has already been claimed.` });
+        return;
+      }
+      res.status(500).json({ error: 'Unable to settle task reward right now.' });
     }
-    res.status(400).json({ error: 'Reward eligibility conditions not met.' });
   });
 
   // ---------------------------------------------------------------------------

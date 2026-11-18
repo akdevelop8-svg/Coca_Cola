@@ -37,6 +37,8 @@ export function RechargePage() {
         );
       }
       setDeposits(dRes.deposits);
+    } catch (err: any) {
+      setError(err?.message || 'Unable to load deposit methods right now.');
     } finally {
       setLoading(false);
     }
