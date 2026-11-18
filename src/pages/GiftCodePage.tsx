@@ -84,12 +84,12 @@ export function GiftCodePage() {
             <div>
               <h2 className="text-xl font-bold">Gift Code Redemption</h2>
               <p className="text-xs sm:text-sm text-white/85">
-                Redeem valid codes for Demo ETB (Simulator Only · No cash value)
+                Redeem valid codes for ETB (Simulator Only · No cash value)
               </p>
             </div>
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2 text-right">
-            <p className="text-[11px] text-white/80">Demo Wallet Balance</p>
+            <p className="text-[11px] text-white/80">Wallet Balance</p>
             <p data-testid="gift-demo-balance" className="text-base font-extrabold tabular-nums">
               {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
             </p>
@@ -117,7 +117,7 @@ export function GiftCodePage() {
         ) : (
           <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-4">
             <p className="text-xs text-slate-600">
-              Enter your promotional Gift Code below to add <strong>Demo ETB</strong> to your Demo Wallet. Each code can be redeemed once per customer.
+              Enter your promotional Gift Code below to add <strong>ETB</strong> to your Wallet. Each code can be redeemed once per customer.
             </p>
 
             {successMsg && (

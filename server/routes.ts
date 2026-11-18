@@ -358,8 +358,8 @@ export function createApiRouter() {
 
         createNotification(
           userId,
-          'Welcome to the Demo Simulator',
-          `You received +${regBonus} Demo ETB as your Registration Bonus. Review and accept the Platform Terms & Summary to continue.`,
+          'Welcome to the Platform',
+          `You received +${regBonus} ETB as your Registration Bonus. Review and accept the Platform Terms & Summary to continue.`,
           'system',
           '/onboarding-terms'
         );
@@ -723,7 +723,7 @@ export function createApiRouter() {
           type: 'daily_checkin',
           amountSigned: checkinAmount,
           referenceId: todayEth,
-          note: `Manual Daily Check-In (+${checkinAmount} Demo ETB · ${todayEth})`,
+          note: `Manual Daily Check-In (+${checkinAmount} ETB · ${todayEth})`,
           idempotencyKey: `checkin:${userId}:${todayEth}`,
           createdAt: now,
         });
@@ -735,7 +735,7 @@ export function createApiRouter() {
         ethiopiaDate: todayEth,
         amount: checkinAmount,
         demoBalance: nextBalance,
-        message: `Claimed +${checkinAmount} Demo ETB for ${todayEth}.`,
+        message: `Claimed +${checkinAmount} ETB for ${todayEth}.`,
       });
     } catch {
       res.status(409).json({ error: `Already claimed for ${todayEth} (Ethiopia time).` });
@@ -794,7 +794,7 @@ export function createApiRouter() {
           type: 'plan_purchase',
           amountSigned: -plan.investment,
           referenceId: purchaseId,
-          note: `Purchased ${plan.name} (-${plan.investment.toLocaleString()} Demo ETB · 365 Days)`,
+          note: `Purchased ${plan.name} (-${plan.investment.toLocaleString()} ETB · 365 Days)`,
           idempotencyKey: `purchase:${purchaseId}`,
           createdAt: nowIso,
         });
@@ -973,7 +973,7 @@ export function createApiRouter() {
           type: 'daily_mining_claim',
           amountSigned: claimedAmount,
           referenceId: purchaseId,
-          note: `Manual daily mining claim for Plan ${purchase.plan_code} (+${claimedAmount.toLocaleString()} Demo ETB · ${todayEth})`,
+          note: `Manual daily mining claim for Plan ${purchase.plan_code} (+${claimedAmount.toLocaleString()} ETB · ${todayEth})`,
           idempotencyKey: `claim:${purchaseId}:${todayEth}`,
           createdAt: nowIso,
         });
@@ -984,7 +984,7 @@ export function createApiRouter() {
         amount: claimedAmount,
         demoBalance: nextBalance,
         ethiopiaDate: todayEth,
-        message: `Claimed +${claimedAmount.toLocaleString()} Demo ETB!`,
+        message: `Claimed +${claimedAmount.toLocaleString()} ETB!`,
       });
     } catch (err: any) {
       const code = err?.statusCode || 409;
@@ -3299,7 +3299,7 @@ export function createApiRouter() {
           type: 'gift_code',
           amountSigned: creditedAmount,
           referenceId: codeRow.id,
-          note: `Gift Code Redeemed (${codeRow.code} · +${creditedAmount.toLocaleString()} Demo ETB)`,
+          note: `Gift Code Redeemed (${codeRow.code} · +${creditedAmount.toLocaleString()} ETB)`,
           idempotencyKey: `gift:${codeRow.id}:${userId}`,
           createdAt: nowIso,
         });
@@ -3311,7 +3311,7 @@ export function createApiRouter() {
         code: cleanCode,
         rewardAmount: creditedAmount,
         demoBalance: nextBalance,
-        message: `Gift code ${cleanCode} redeemed! +${creditedAmount.toLocaleString()} Demo ETB added to your Demo Wallet.`,
+        message: `Gift code ${cleanCode} redeemed! +${creditedAmount.toLocaleString()} ETB added to your Wallet.`,
       });
     } catch (err: any) {
       const code = err?.statusCode || 400;
@@ -3408,7 +3408,7 @@ export function createApiRouter() {
         return;
       }
       if (!Number.isFinite(rewardAmount) || rewardAmount <= 0) {
-        res.status(400).json({ error: 'Reward amount must be a positive Demo ETB value.' });
+        res.status(400).json({ error: 'Reward amount must be a positive ETB value.' });
         return;
       }
 

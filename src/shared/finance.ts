@@ -25,7 +25,7 @@ export function formatDemoCredits(amount: number): string {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: hasFraction ? 2 : 0,
   }).format(hasFraction ? Math.round(safe * 100) / 100 : Math.round(safe));
-  return `${formatted} Demo ETB`;
+  return `${formatted} ETB`;
 }
 
 export const formatDemoEtb = formatDemoCredits;
@@ -177,13 +177,13 @@ export function canPurchaseDemoPlan(
   if (activePlansCount >= maxActivePlans) {
     return {
       ok: false,
-      error: `Purchase limit reached: maximum ${maxActivePlans} active demo plans allowed per customer.`,
+      error: `Purchase limit reached: maximum ${maxActivePlans} active plans allowed per customer.`,
     };
   }
   if (!Number.isFinite(demoBalance) || demoBalance < planInvestment) {
     return {
       ok: false,
-      error: `Insufficient Demo ETB. You need ${formatDemoCredits(planInvestment)}, available ${formatDemoCredits(Math.max(0, demoBalance))}.`,
+      error: `Insufficient ETB. You need ${formatDemoCredits(planInvestment)}, available ${formatDemoCredits(Math.max(0, demoBalance))}.`,
     };
   }
   return { ok: true };

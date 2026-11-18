@@ -461,14 +461,15 @@ function runSchemaMigrations(): void {
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(LOWER(username)) WHERE username IS NOT NULL;'
   );
 
-  // Normalize legacy Demo Credits copy in existing records to Demo ETB
+  // Normalize legacy Demo copy in existing records to ETB / Platform / Wallet
   db.exec(`
     UPDATE demo_credit_transactions
-    SET note = REPLACE(note, 'Demo Credits', 'Demo ETB')
-    WHERE note LIKE '%Demo Credits%';
+    SET note = REPLACE(REPLACE(REPLACE(note, 'Demo Credits', 'ETB'), 'Demo ETB', 'ETB'), 'Demo Wallet', 'Wallet')
+    WHERE note LIKE '%Demo%';
     UPDATE notifications
-    SET body = REPLACE(body, 'Demo Credits', 'Demo ETB')
-    WHERE body LIKE '%Demo Credits%';
+    SET title = REPLACE(REPLACE(title, 'Demo Simulator', 'Platform'), 'Demo ', ''),
+        body = REPLACE(REPLACE(REPLACE(body, 'Demo Credits', 'ETB'), 'Demo ETB', 'ETB'), 'Demo ', '')
+    WHERE title LIKE '%Demo%' OR body LIKE '%Demo%';
   `);
 
   // 2. Extend withdrawals CHECK constraint to allow processed/completed + audit columns
@@ -786,7 +787,7 @@ export function grantRegistrationDemoBonus(
     type: 'registration_bonus',
     amountSigned: safeAmount,
     referenceId: userId,
-    note: `Registration bonus (+${safeAmount} Demo ETB)`,
+    note: `Registration bonus (+${safeAmount} ETB)`,
     idempotencyKey: `reg_bonus:${userId}`,
     createdAt,
   });

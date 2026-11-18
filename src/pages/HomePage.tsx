@@ -114,13 +114,13 @@ export function HomePage() {
       });
       setPurchaseResult({
         ok: true,
-        text: `${selectedPlan.name} activated with ${formatDemoCredits(selectedPlan.investment)}. Visit Income to manually claim daily demo mining.`,
+        text: `${selectedPlan.name} activated with ${formatDemoCredits(selectedPlan.investment)}. Visit Income to manually claim daily mining.`,
       });
       await loadSummary();
     } catch (err: any) {
       setPurchaseResult({
         ok: false,
-        text: err?.message || 'Could not complete demo plan purchase.',
+        text: err?.message || 'Could not complete plan purchase.',
       });
     } finally {
       setPurchaseBusy(false);
@@ -219,20 +219,20 @@ export function HomePage() {
           )}
         </section>
 
-        {/* Demo Simulator Clear Notice */}
+        {/* Sandbox Simulator Clear Notice */}
         <div
-          data-testid="demo-simulator-disclaimer"
+          data-testid="sandbox-simulator-disclaimer"
           className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-center gap-2.5"
         >
           <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
           <span>
-            <strong>Demo ETB Simulator Only:</strong> Rewards, daily check-ins, and plan calculations operate strictly in{' '}
-            <strong>Demo ETB</strong> (no cash value, not real ETB, no guaranteed financial returns, not withdrawable money).
+            <strong>Sandbox Simulator Only:</strong> Rewards, daily check-ins, and plan calculations operate strictly in{' '}
+            <strong>simulated ETB</strong> (no cash value, no guaranteed financial returns, not withdrawable money).
           </span>
         </div>
 
-        {/* B. FOUR ACCOUNT SUMMARY CARDS (DEMO WALLET) */}
-        <section aria-label="Demo Account Summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* B. FOUR ACCOUNT SUMMARY CARDS */}
+        <section aria-label="Account Summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between gap-2">
               <div className="w-10 h-10 rounded-xl bg-red-50 text-[#D71920] flex items-center justify-center shrink-0">
@@ -247,7 +247,7 @@ export function HomePage() {
               </button>
             </div>
             <div className="mt-3">
-              <p className="text-xs text-slate-500">Demo Wallet Balance</p>
+              <p className="text-xs text-slate-500">Wallet Balance</p>
               <p data-testid="summary-balance" className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
                 {loadingSummary ? '...' : formatDemoCredits(summary?.demoBalance ?? 0)}
               </p>
@@ -268,7 +268,7 @@ export function HomePage() {
               </button>
             </div>
             <div className="mt-3">
-              <p className="text-xs text-slate-500">Demo Mining Earnings</p>
+              <p className="text-xs text-slate-500">Mining Earnings</p>
               <p className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
                 {loadingSummary ? '...' : formatDemoCredits(summary?.demoTotalEarnings ?? 0)}
               </p>
@@ -310,7 +310,7 @@ export function HomePage() {
               </button>
             </div>
             <div className="mt-3">
-              <p className="text-xs text-slate-500">Demo Rewards</p>
+              <p className="text-xs text-slate-500">Total Rewards</p>
               <p className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
                 {loadingSummary ? '...' : formatDemoCredits(summary?.demoTotalRewards ?? 0)}
               </p>
@@ -406,7 +406,7 @@ export function HomePage() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-slate-500">Referral Demo Rewards</p>
+              <p className="text-[11px] text-slate-500">Referral Rewards</p>
               <p className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums">
                 {settings?.referralLevel1Percent ?? 20}% · {settings?.referralLevel2Percent ?? 2}% ·{' '}
                 {settings?.referralLevel3Percent ?? 1}%
@@ -439,18 +439,18 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* E. INVESTMENT PLAN SIMULATOR (FULL WIDTH, ALL 13 PLANS A-M IN DEMO ETB) */}
+        {/* E. INVESTMENT PLANS (FULL WIDTH, ALL 13 PLANS A-M) */}
         <section
           ref={plansSectionRef}
           id="investment-plans"
-          aria-label="Investment Plans Simulator"
+          aria-label="Investment Plans"
           className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden"
         >
           <div className="bg-gradient-to-r from-[#D71920] to-[#B80D13] text-white px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 min-w-0">
               <TrendingUp className="w-5 h-5 shrink-0" />
               <h2 className="text-sm sm:text-base font-bold tracking-wide uppercase">
-                Investment Plan Simulator (Demo ETB)
+                Investment Plans (ETB)
               </h2>
             </div>
             <button
@@ -465,7 +465,7 @@ export function HomePage() {
 
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
             <span>
-              Simulated plans use <strong>Demo ETB only</strong> (max {MAX_ACTIVE_PLANS} active plans, 365-day manual daily claim).
+              Simulated plans use <strong>ETB balance only</strong> (max {MAX_ACTIVE_PLANS} active plans, 365-day manual daily claim).
             </span>
             <span className="font-semibold text-slate-900 tabular-nums">
               Available: {formatDemoCredits(summary?.demoBalance ?? 0)}
@@ -504,13 +504,13 @@ export function HomePage() {
 
                   <div className="space-y-1.5 text-xs">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Demo Investment:</span>
+                      <span className="text-slate-500">Investment:</span>
                       <span className="font-bold text-slate-900 tabular-nums text-right">
                         {formatDemoCredits(plan.investment)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Daily Demo Mining:</span>
+                      <span className="text-slate-500">Daily Mining:</span>
                       <span className="font-bold text-[#D71920] tabular-nums text-right">
                         {formatDemoCredits(plan.dailyMining)}
                       </span>
@@ -535,17 +535,17 @@ export function HomePage() {
         </section>
       </div>
 
-      {/* Demo Plan Purchase Confirmation Modal */}
+      {/* Plan Purchase Confirmation Modal */}
       {selectedPlan && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Confirm Demo Plan ${selectedPlan.code}`}
+          aria-label={`Confirm Plan ${selectedPlan.code}`}
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200">
             <div className="bg-[#D71920] text-white px-5 py-4 flex items-center justify-between">
-              <h3 className="font-bold text-base">Confirm Demo Plan {selectedPlan.code}</h3>
+              <h3 className="font-bold text-base">Confirm Plan {selectedPlan.code}</h3>
               <button
                 type="button"
                 onClick={() => setSelectedPlan(null)}
@@ -563,13 +563,13 @@ export function HomePage() {
                   <strong>{selectedPlan.name}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Demo ETB to Deduct</span>
+                  <span className="text-slate-500">Amount to Deduct</span>
                   <strong className="tabular-nums text-slate-900">
                     {formatDemoCredits(selectedPlan.investment)}
                   </strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Daily Demo Mining (Manual Claim)</span>
+                  <span className="text-slate-500">Daily Mining (Manual Claim)</span>
                   <strong className="text-[#D71920] tabular-nums">
                     {formatDemoCredits(selectedPlan.dailyMining)} / day
                   </strong>
@@ -579,7 +579,7 @@ export function HomePage() {
                   <strong>{selectedPlan.periodDays} Days</strong>
                 </div>
                 <div className="flex justify-between gap-2 pt-2 border-t border-slate-200">
-                  <span className="text-slate-500">Your Demo Balance</span>
+                  <span className="text-slate-500">Your Wallet Balance</span>
                   <strong className="tabular-nums">{formatDemoCredits(summary?.demoBalance ?? 0)}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
@@ -591,7 +591,7 @@ export function HomePage() {
               </div>
 
               <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                <strong>Demo ETB Simulator:</strong> Deducts simulated Demo ETB only. No real money or cash payout is involved. Daily rewards require manual claiming on the Income page.
+                <strong>Sandbox Simulator:</strong> Deducts simulated ETB only. No real money or cash payout is involved. Daily rewards require manual claiming on the Income page.
               </div>
 
               {purchaseResult && (

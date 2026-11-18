@@ -1905,7 +1905,7 @@ export function AdminDashboardPage() {
           </div>
         )}
 
-        {/* 8. GIFT CODE MANAGEMENT (DEMO ETB ONLY, ZERO CUSTOMER BALANCES EXPOSED) */}
+        {/* 8. GIFT CODE MANAGEMENT (SANDBOX ETB ONLY, ZERO CUSTOMER BALANCES EXPOSED) */}
         {tab === 'gift_codes' && (
           <div className="space-y-5">
             {/* Global Feature Toggle Banner */}
@@ -1922,7 +1922,7 @@ export function AdminDashboardPage() {
                 </div>
                 <p className="text-xs text-slate-500">
                   When disabled, the Gift Code button is completely hidden from all customer dashboards and API redemption is blocked.
-                  All gift codes award non-cash <strong>Demo ETB</strong> only.
+                  All gift codes award non-cash <strong>ETB</strong> only.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1982,7 +1982,7 @@ export function AdminDashboardPage() {
                 </div>
                 <div>
                   <label htmlFor="gc-reward" className="block text-xs font-semibold text-slate-600 mb-1">
-                    Reward Amount (Demo ETB)
+                    Reward Amount (ETB)
                   </label>
                   <input
                     id="gc-reward"
@@ -2041,7 +2041,7 @@ export function AdminDashboardPage() {
                 </h3>
                 {giftCodes.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-6">
-                    No gift codes created yet. Create one to reward customers with Demo ETB.
+                    No gift codes created yet. Create one to reward customers with ETB.
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">

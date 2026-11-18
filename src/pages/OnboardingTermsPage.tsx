@@ -117,11 +117,11 @@ export function OnboardingTermsPage() {
           <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
             <div className="text-xs sm:text-sm text-amber-900">
-              <p className="font-semibold">Demo ETB Simulator Notice</p>
+              <p className="font-semibold">Sandbox Simulator Notice</p>
               <p className="mt-1">
                 All reward balances, gift codes, daily check-ins, investment-plan simulations, and referral rewards
-                operate strictly in <strong>Demo ETB only</strong>. Demo ETB has{' '}
-                <strong>no real cash value</strong>, is <strong>not real ETB</strong>, and is{' '}
+                operate strictly in <strong>simulated ETB only</strong>. Simulated ETB has{' '}
+                <strong>no real cash value</strong>, is <strong>not real cash</strong>, and is{' '}
                 <strong>not withdrawable</strong>.
               </p>
             </div>
@@ -134,7 +134,7 @@ export function OnboardingTermsPage() {
               <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">
                 {formatDemoCredits(settings?.registrationBonus ?? 150)}
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Demo ETB only</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Simulated ETB only</p>
             </div>
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
               <p className="text-[11px] text-slate-500">Daily Check-In</p>
@@ -148,15 +148,15 @@ export function OnboardingTermsPage() {
               <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">
                 {settings?.purchaseLimit ?? 2} Active Plans
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">365-day demo term</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">365-day term</p>
             </div>
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-              <p className="text-[11px] text-slate-500">Referral Demo Rewards</p>
+              <p className="text-[11px] text-slate-500">Referral Rewards</p>
               <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">
                 {settings?.referralLevel1Percent ?? 20}% · {settings?.referralLevel2Percent ?? 2}% ·{' '}
                 {settings?.referralLevel3Percent ?? 1}%
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">On demo plan purchases</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">On plan purchases</p>
             </div>
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
               <p className="text-[11px] text-slate-500">Minimum Withdrawal (ETB)</p>
@@ -185,20 +185,20 @@ export function OnboardingTermsPage() {
             className="h-44 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed"
           >
             <p>
-              <strong>1. Demo ETB Simulator &amp; Non-Cash Policy:</strong> Investment plan simulations (600 to
-              1,000,000 Demo ETB), daily check-ins (2 Demo ETB), daily mining claims, gift codes, and referral
-              rewards operate in Demo ETB only. They do not represent real ETB, guaranteed returns, withdrawable
+              <strong>1. Sandbox Simulator &amp; Non-Cash Policy:</strong> Investment plan simulations (600 to
+              1,000,000 ETB), daily check-ins (2 ETB), daily mining claims, gift codes, and referral
+              rewards operate in simulated ETB only. They do not represent real cash, guaranteed returns, withdrawable
               money, or an endorsement by The Coca-Cola Company.
             </p>
             <p>
               <strong>2. Manual Claims &amp; Active Limits:</strong> Daily check-in rewards and daily plan mining
               rewards are never credited automatically—you must press the Claim button manually once per Ethiopia
-              calendar day. Up to {settings?.purchaseLimit ?? 2} active demo plans are permitted per account.
+              calendar day. Up to {settings?.purchaseLimit ?? 2} active plans are permitted per account.
             </p>
             <p>
               <strong>3. Verified Deposits &amp; Withdrawals:</strong> Real deposit submissions to{' '}
               {config?.activeDepositMethods?.[0]?.accountNumber || settings?.depositCbeAccountNumber || '1000673029578'}{' '}
-              require unique transaction references and Admin verification. Demo ETB remains separate and cannot be
+              require unique transaction references and Admin verification. Simulated reward balances remain separate and cannot be
               withdrawn as cash.
             </p>
             <p>

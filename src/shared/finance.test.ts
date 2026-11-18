@@ -43,13 +43,13 @@ test('CBE deposit and withdrawal settings match required configuration', () => {
   assert.equal(DEFAULT_SUPPORT_CHANNELS[1].href, 'https://t.me/Cocacolacampany');
 });
 
-test('formatBr and formatDemoCredits format amounts consistently in Demo ETB', () => {
+test('formatBr and formatDemoCredits format amounts consistently in ETB', () => {
   assert.equal(formatBr(600), 'Br 600');
   assert.equal(formatBr(1500), 'Br 1,500');
   assert.equal(formatBr(0, true), 'Br 0.00');
-  assert.equal(formatDemoCredits(600), '600 Demo ETB');
-  assert.equal(formatDemoCredits(1500), '1,500 Demo ETB');
-  assert.equal(formatDemoCredits(12.5), '12.50 Demo ETB');
+  assert.equal(formatDemoCredits(600), '600 ETB');
+  assert.equal(formatDemoCredits(1500), '1,500 ETB');
+  assert.equal(formatDemoCredits(12.5), '12.50 ETB');
 });
 
 test('calculateWithdrawalBreakdown enforces minimum 150, available balance, and 17% fee', () => {
@@ -67,7 +67,7 @@ test('calculateWithdrawalBreakdown enforces minimum 150, available balance, and 
   assert.match(overBalance.error || '', /Insufficient balance/i);
 });
 
-test('canPurchaseDemoPlan enforces max 2 active plans and sufficient Demo ETB', () => {
+test('canPurchaseDemoPlan enforces max 2 active plans and sufficient ETB', () => {
   assert.equal(canPurchaseDemoPlan(0, 600, 600).ok, true);
   assert.equal(canPurchaseDemoPlan(1, 1500, 1500).ok, true);
 
@@ -77,7 +77,7 @@ test('canPurchaseDemoPlan enforces max 2 active plans and sufficient Demo ETB', 
 
   const lowBalance = canPurchaseDemoPlan(0, 150, 600);
   assert.equal(lowBalance.ok, false);
-  assert.match(lowBalance.error || '', /Insufficient Demo ETB/i);
+  assert.match(lowBalance.error || '', /Insufficient ETB/i);
 });
 
 test('computePlanProgress calculates elapsed days, remaining days out of 365, and completion', () => {
@@ -124,7 +124,7 @@ test('evaluateGiftCodeEligibility enforces enabled, active, expiry, duplicate, a
   assert.equal(evaluateGiftCodeEligibility({ ...base, redemptionCount: 5 }).status, 400);
 });
 
-test('calculateReferralDemoRewards computes 20%, 2%, 1% Demo ETB tiers', () => {
+test('calculateReferralDemoRewards computes 20%, 2%, 1% ETB tiers', () => {
   const rewards = calculateReferralDemoRewards(3000);
   assert.deepEqual(rewards, { level1: 600, level2: 60, level3: 30 });
 });

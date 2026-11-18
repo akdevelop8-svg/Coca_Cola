@@ -116,9 +116,9 @@ export function IncomePage() {
         {/* Top Banner */}
         <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-[#D71920] to-[#98080D] text-white grid grid-cols-1 sm:grid-cols-12 shadow-md">
           <div className="sm:col-span-7 p-5 flex flex-col justify-center">
-            <h2 className="text-xl sm:text-2xl font-bold">{displayName}&apos;s Purchased Plans &amp; Demo Income</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">{displayName}&apos;s Purchased Plans &amp; Income</h2>
             <p className="text-xs sm:text-sm text-white/85 mt-1">
-              Lists only plans purchased by your account. Daily mining Demo ETB is never added automatically — press CLAIM manually each day.
+              Lists only plans purchased by your account. Daily mining ETB is never added automatically — press CLAIM manually each day.
             </p>
           </div>
           <div className="sm:col-span-5 h-32 sm:h-auto overflow-hidden">
@@ -135,7 +135,7 @@ export function IncomePage() {
         <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-center gap-2.5">
           <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
           <span>
-            <strong>Demo ETB Simulator:</strong> All plan returns are simulated Demo ETB (no cash value, not withdrawable).
+            <strong>Sandbox Simulator:</strong> All plan returns are simulated ETB (no cash value, not withdrawable).
           </span>
         </div>
 
@@ -170,7 +170,7 @@ export function IncomePage() {
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Demo Wallet Balance</p>
+              <p className="text-xs text-slate-500">Wallet Balance</p>
               <p data-testid="income-demo-balance" className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
                 {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
               </p>
@@ -208,7 +208,7 @@ export function IncomePage() {
               <FileSearch className="w-10 h-10 text-slate-300 mx-auto" />
               <p className="text-sm font-semibold text-slate-700">No purchased plans yet</p>
               <p className="text-xs text-slate-500">
-                Only plans actually purchased with your Demo ETB appear here.
+                Only plans actually purchased with your ETB balance appear here.
               </p>
             </div>
           ) : (
@@ -247,13 +247,13 @@ export function IncomePage() {
 
                   <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-white border border-slate-200/80 p-3 text-xs">
                     <div>
-                      <p className="text-slate-500">Original Demo Investment</p>
+                      <p className="text-slate-500">Original Investment</p>
                       <p className="font-bold text-slate-900 tabular-nums mt-0.5">
                         {formatDemoCredits(p.amount)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Daily Demo Mining</p>
+                      <p className="text-slate-500">Daily Mining</p>
                       <p className="font-bold text-[#D71920] tabular-nums mt-0.5">
                         {formatDemoCredits(p.dailyMiningRate)}
                       </p>
@@ -311,10 +311,10 @@ export function IncomePage() {
           )}
         </section>
 
-        {/* Complete Demo Wallet Transaction History */}
+        {/* Complete Wallet Transaction History */}
         <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-[#D71920] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold">{displayName} — Demo Wallet Transaction History</h3>
+            <h3 className="text-sm font-bold">{displayName} — Wallet Transaction History</h3>
             <div className="flex items-center gap-1 bg-white/15 p-1 rounded-full text-xs">
               {(['all', 'today', 'month'] as const).map((tab) => (
                 <button
@@ -334,8 +334,8 @@ export function IncomePage() {
           {filteredTx.length === 0 ? (
             <div className="py-12 px-4 text-center space-y-2">
               <FileSearch className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-semibold text-slate-700">No demo transactions found</p>
-              <p className="text-xs text-slate-500">Your Demo ETB activity will appear here.</p>
+              <p className="text-sm font-semibold text-slate-700">No transactions found</p>
+              <p className="text-xs text-slate-500">Your ETB activity will appear here.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -344,7 +344,7 @@ export function IncomePage() {
                   <tr>
                     <th className="px-4 py-3 font-semibold">Date &amp; Time</th>
                     <th className="px-4 py-3 font-semibold">Activity</th>
-                    <th className="px-4 py-3 font-semibold text-right">Demo ETB</th>
+                    <th className="px-4 py-3 font-semibold text-right">ETB</th>
                     <th className="px-4 py-3 font-semibold text-right">Balance After</th>
                   </tr>
                 </thead>

@@ -63,7 +63,7 @@ export function LoginPage() {
         <div className="relative z-10 flex items-center justify-between">
           <CocaColaScriptLogo color="#FFFFFF" className="h-10 sm:h-12" />
           {config?.sandboxMode && (
-            <span className="text-xs font-medium text-amber-200">Demo Simulator Environment</span>
+            <span className="text-xs font-medium text-amber-200">Sandbox Environment</span>
           )}
         </div>
 
@@ -72,7 +72,7 @@ export function LoginPage() {
             Invest Today <span className="text-amber-300">Build a Better Tomorrow</span>
           </h1>
           <p className="mt-3 text-sm sm:text-base text-white/90 leading-relaxed">
-            Together for a Prosperous Future. Sign in to explore the Demo ETB simulator, manual daily check-ins, and account records.
+            Together for a Prosperous Future. Sign in to explore the investment plans, manual daily check-ins, and account records.
           </p>
           <div className="mt-6 rounded-2xl overflow-hidden border border-white/20 shadow-xl bg-white flex justify-center">
             <img
@@ -85,7 +85,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative z-10 text-xs text-white/75">
-          Protected authentication · Ethiopia (+251) · Demo ETB Simulator
+          Protected authentication · Ethiopia (+251) · Sandbox Mode
         </p>
       </div>
 

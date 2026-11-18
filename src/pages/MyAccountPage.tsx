@@ -97,7 +97,7 @@ export function MyAccountPage() {
     ...(giftCodeEnabled
       ? [{ label: 'Gift Code', icon: Gift, action: () => navigate('/gift-code'), testId: 'my-gift-code-btn' }]
       : []),
-    { label: 'All Records & Demo History', icon: FileText, action: () => navigate('/income') },
+    { label: 'All Records & History', icon: FileText, action: () => navigate('/income') },
     { label: 'Recharge Records', icon: Wallet, action: () => navigate('/recharge') },
     { label: 'Withdrawal Records', icon: CreditCard, action: () => navigate('/withdraw') },
     { label: 'Bank Account Management', icon: Landmark, action: () => navigate('/my/bank-account') },
@@ -135,19 +135,19 @@ export function MyAccountPage() {
 
           <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-white/12 rounded-2xl p-3 text-center">
             <div>
-              <p className="text-[11px] text-white/80">Demo Balance</p>
+              <p className="text-[11px] text-white/80">Account Balance</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatDemoCredits(summary?.demoBalance ?? 0)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-white/80">Demo Rewards</p>
+              <p className="text-[11px] text-white/80">Total Rewards</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatDemoCredits(summary?.demoTotalRewards ?? 0)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-white/80">Demo Commission</p>
+              <p className="text-[11px] text-white/80">Team Commission</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatDemoCredits(summary?.demoTeamCommission ?? 0)}
               </p>
@@ -288,11 +288,11 @@ export function MyAccountPage() {
             </div>
             <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
               <p><strong>Terms Version Accepted:</strong> {user?.termsAcceptedVersion || 'Pending'}</p>
-              <p><strong>Simulator Currency:</strong> Demo ETB Only (no real cash value, not withdrawable)</p>
-              <p><strong>Registration Bonus:</strong> {config?.settings.registrationBonus ?? 150} Demo ETB</p>
-              <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} Demo ETB (manual claim once/day)</p>
+              <p><strong>Currency:</strong> Simulated ETB Only (no real cash value, not withdrawable)</p>
+              <p><strong>Registration Bonus:</strong> {config?.settings.registrationBonus ?? 150} ETB</p>
+              <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (manual claim once/day)</p>
               <p><strong>Active Plan Limit:</strong> Maximum {MAX_ACTIVE_PLANS} active plans (365-day manual daily claim)</p>
-              <p><strong>Referral Demo Rewards:</strong> Level 1: {config?.settings.referralLevel1Percent ?? 20}%, Level 2: {config?.settings.referralLevel2Percent ?? 2}%, Level 3: {config?.settings.referralLevel3Percent ?? 1}%</p>
+              <p><strong>Referral Rewards:</strong> Level 1: {config?.settings.referralLevel1Percent ?? 20}%, Level 2: {config?.settings.referralLevel2Percent ?? 2}%, Level 3: {config?.settings.referralLevel3Percent ?? 1}%</p>
             </div>
           </div>
         </div>

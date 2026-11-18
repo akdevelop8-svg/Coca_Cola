@@ -124,8 +124,8 @@ export function TeamPage() {
         {/* Referral Commission Rates */}
         <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs">
           <div className="bg-[#D71920] text-white px-4 py-2.5 flex items-center justify-between text-sm font-bold">
-            <span>Referral Demo Rewards</span>
-            <span className="text-[11px] font-normal text-white/90">Demo ETB Only</span>
+            <span>Referral Rewards</span>
+            <span className="text-[11px] font-normal text-white/90">ETB</span>
           </div>
           <div className="p-4 grid grid-cols-3 gap-3 text-center">
             <div className="rounded-xl bg-slate-50 p-3">
@@ -207,13 +207,13 @@ export function TeamPage() {
               <strong className="tabular-nums">{data?.summary.totalRegisteredMembers ?? 0}</strong>
             </div>
             <div className="py-2 flex justify-between">
-              <span className="text-slate-600">Qualifying Demo Plan Volume</span>
+              <span className="text-slate-600">Qualifying Plan Volume</span>
               <strong className="tabular-nums">
                 {formatDemoCredits(data?.summary.totalQualifyingVolume ?? 0)}
               </strong>
             </div>
             <div className="py-2 flex justify-between">
-              <span className="text-slate-600">Team Demo Commission Earned</span>
+              <span className="text-slate-600">Team Commission Earned</span>
               <strong className="tabular-nums">
                 {formatDemoCredits(data?.summary.teamCommission ?? 0)}
               </strong>
@@ -251,7 +251,7 @@ export function TeamPage() {
           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>
-              Private member details are masked. Demo ETB referral rewards trigger only when referred members purchase a Demo Plan (never on registration alone) and have no cash value.
+              Private member details are masked. Referral rewards in ETB trigger only when referred members purchase a Plan (never on registration alone) and have no cash value.
             </span>
           </div>
 
@@ -274,7 +274,7 @@ export function TeamPage() {
                       {m.qualifyingStatus}
                     </p>
                     <p className="text-xs text-slate-500 tabular-nums">
-                      Demo Plan Volume: {formatDemoCredits(m.qualifyingPurchaseValue)}
+                      Plan Volume: {formatDemoCredits(m.qualifyingPurchaseValue)}
                     </p>
                   </div>
                 </div>

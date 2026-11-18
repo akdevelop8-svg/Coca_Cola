@@ -83,7 +83,7 @@ export function TaskPage() {
             />
           </div>
           <p className="text-xs text-white/85">
-            Qualifying demo volume: <strong className="tabular-nums">{formatDemoCredits(data?.qualifyingPurchasesVolume ?? 0)}</strong> · Rewards never trigger on registrations alone.
+            Qualifying volume: <strong className="tabular-nums">{formatDemoCredits(data?.qualifyingPurchasesVolume ?? 0)}</strong> · Rewards never trigger on registrations alone.
           </p>
         </div>
 

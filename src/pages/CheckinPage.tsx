@@ -25,7 +25,7 @@ export function CheckinPage() {
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Read-only fetch on page open — NEVER auto-credits Demo ETB
+  // Read-only fetch on page open — NEVER auto-credits ETB
   const loadStatus = async () => {
     setLoading(true);
     try {
@@ -75,25 +75,25 @@ export function CheckinPage() {
             <div>
               <h2 className="text-xl sm:text-2xl font-bold">Daily Check-In</h2>
               <p className="text-xs sm:text-sm text-white/85 mt-0.5">
-                Manual claim only · +{data?.rewardAmount ?? 2} Demo ETB per Ethiopia calendar day
+                Manual claim only · +{data?.rewardAmount ?? 2} ETB per Ethiopia calendar day
               </p>
             </div>
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2.5 text-right">
-            <p className="text-[11px] text-white/80">Demo Wallet Balance</p>
+            <p className="text-[11px] text-white/80">Wallet Balance</p>
             <p data-testid="checkin-demo-balance" className="text-base sm:text-lg font-extrabold tabular-nums">
               {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
             </p>
           </div>
         </section>
 
-        {/* Demo Simulator Disclaimer */}
+        {/* Sandbox Simulator Disclaimer */}
         <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-start gap-2.5">
           <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
           <p>
-            <strong>Demo ETB Simulator:</strong> Opening the app or this page never automatically awards Demo ETB.
+            <strong>Sandbox Simulator:</strong> Opening the app or this page never automatically awards ETB.
             Press <strong>CLAIM</strong> below once per calendar day (Ethiopia time: Africa/Addis_Ababa) to collect{' '}
-            <strong>{data?.rewardAmount ?? 2} Demo ETB</strong>. Demo ETB has no cash value and is not withdrawable.
+            <strong>{data?.rewardAmount ?? 2} ETB</strong>. Simulated ETB has no cash value and is not withdrawable.
           </p>
         </div>
 
@@ -118,12 +118,12 @@ export function CheckinPage() {
             </div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Coins className="w-5 h-5 text-[#D71920]" />
-              <span>Daily Reward: {data?.rewardAmount ?? 2} Demo ETB</span>
+              <span>Daily Reward: {data?.rewardAmount ?? 2} ETB</span>
             </h3>
             <p className="text-xs text-slate-500">
               {claimedToday
                 ? 'Claimed Today — come back after midnight (Ethiopia time) for your next manual claim.'
-                : 'Ready to claim manually. Click CLAIM to credit your Demo Wallet.'}
+                : 'Ready to claim manually. Click CLAIM to credit your Wallet.'}
             </p>
           </div>
 
@@ -157,7 +157,7 @@ export function CheckinPage() {
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
           ) : !data?.history.length ? (
             <p className="p-8 text-center text-sm text-slate-500">
-              No daily check-ins claimed yet. Press CLAIM above to claim today&apos;s {data?.rewardAmount ?? 2} Demo ETB.
+              No daily check-ins claimed yet. Press CLAIM above to claim today&apos;s {data?.rewardAmount ?? 2} ETB.
             </p>
           ) : (
             <div className="divide-y divide-slate-100">
