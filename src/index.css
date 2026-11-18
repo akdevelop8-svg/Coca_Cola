@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-red: #d71920;
+    --brand-red-dark: #a3080c;
+    --brand-red-light: #fff1f2;
+    --surface-canvas: #f4f6f9;
+    --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--surface-canvas);
+    color: #111827;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Synchronized 5-second 3D Y-axis card-flip animation ONLY for Invest Now buttons */
+.invest-btn-perspective {
+  perspective: 700px;
+  display: inline-block;
+}
+
+@keyframes investBtnFlip3D {
+  0%, 82% {
+    transform: rotateY(0deg);
+  }
+  91% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+.invest-btn-flip {
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: investBtnFlip3D 5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+/* Subtle decorative cola-liquid river shimmer animation */
+@keyframes colaRiverFlow {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-24px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.cola-river-animate {
+  will-change: transform;
+  animation: colaRiverFlow 12s ease-in-out infinite;
+}
+
+@keyframes colaPourStream {
+  0%, 100% {
+    transform: scaleY(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scaleY(1.04);
+    opacity: 1;
+  }
+}
+
+.cola-pour-animate {
+  transform-origin: top center;
+  animation: colaPourStream 2.8s ease-in-out infinite;
+}
+
+/* Respect OS reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .invest-btn-flip,
+  .cola-river-animate,
+  .cola-pour-animate {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Smooth continuous 360-degree circular ring rotation around LoadingScreen profile photo */
+@keyframes loadingRingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loadingRingReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.loading-ring-spin {
+  will-change: transform;
+  animation: loadingRingSpin 1.35s linear infinite;
+}
+
+.loading-ring-reverse {
+  will-change: transform;
+  animation: loadingRingReverse 2.6s linear infinite;
+}
+
+.loading-ring-paused {
+  animation-play-state: paused !important;
+}
+
