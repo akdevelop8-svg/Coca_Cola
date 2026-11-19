@@ -145,8 +145,8 @@ export function HomePage() {
           onBlur={() => setCarouselPaused(false)}
           className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-r from-[#C81018] via-[#E11D24] to-[#98080D] text-white shadow-lg"
         >
-          <div className="grid grid-cols-1 md:grid-cols-12 items-stretch min-h-[210px] sm:min-h-[250px]">
-            <div className="md:col-span-7 p-5 sm:p-8 flex flex-col justify-center relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 items-stretch h-[410px] sm:h-[460px] md:h-[300px]">
+            <div className="md:col-span-7 h-[230px] sm:h-[250px] md:h-full overflow-hidden p-5 sm:p-8 flex flex-col justify-center relative z-10">
               <p data-testid="home-welcome-greeting" className="text-xs sm:text-sm font-semibold text-white/90 mb-1.5">
                 Welcome back, {displayName}
               </p>
@@ -171,12 +171,12 @@ export function HomePage() {
               </div>
             </div>
 
-            <div className="md:col-span-5 relative min-h-[160px] sm:min-h-[220px] overflow-hidden bg-[#8C060A]">
+            <div className="md:col-span-5 relative h-[180px] sm:h-[210px] md:h-full min-h-0 overflow-hidden bg-[#8C060A]">
               <img
                 key={activeSlide.id}
                 src={activeSlide.imageUrl}
                 alt={activeSlide.title}
-                className="w-full h-full object-cover object-center transition-opacity duration-500"
+                className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-[#D71920]/70 via-transparent to-transparent md:block hidden" />

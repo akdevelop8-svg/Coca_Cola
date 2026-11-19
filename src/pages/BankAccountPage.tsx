@@ -39,8 +39,8 @@ export function BankAccountPage() {
         apiFetch<{ payoutMethods: PaymentMethodRecord[] }>('/api/payment-methods'),
       ]);
       setAccount(acctRes.account);
-      setChangeRequests(acctRes.changeRequests);
-      setPayoutMethods(pmRes.payoutMethods);
+      setChangeRequests(acctRes.changeRequests || []);
+      setPayoutMethods(pmRes.payoutMethods || []);
       if (pmRes.payoutMethods.length > 0) {
         setSelectedMethodId((prev) =>
           pmRes.payoutMethods.some((m) => m.id === prev) ? prev : pmRes.payoutMethods[0].id

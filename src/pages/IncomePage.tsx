@@ -30,6 +30,10 @@ interface IncomeResponse {
   activePlansCount: number;
   myIncome: number;
   availableBalance: number;
+  reservedBalance: number;
+  promotionalCredit: number;
+  totalRewards: number;
+  teamCommission: number;
   todayEthiopiaDate: string;
   purchases: PurchasedPlanItem[];
   transactions: LedgerTransaction[];
@@ -187,6 +191,34 @@ export function IncomePage() {
             </div>
           </div>
         </div>
+
+
+        <section aria-label="Wallet balance breakdown" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
+            <p className="text-[11px] sm:text-xs text-slate-500">Registration Bonus &amp; Promo</p>
+            <p data-testid="income-promo-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
+              {loading ? '...' : formatEtb(data?.promotionalCredit ?? 0)}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
+            <p className="text-[11px] sm:text-xs text-slate-500">Check-In, Task &amp; Gift Rewards</p>
+            <p data-testid="income-reward-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
+              {loading ? '...' : formatEtb(data?.totalRewards ?? 0)}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
+            <p className="text-[11px] sm:text-xs text-slate-500">Referral Commissions</p>
+            <p data-testid="income-commission-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
+              {loading ? '...' : formatEtb(data?.teamCommission ?? 0)}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
+            <p className="text-[11px] sm:text-xs text-slate-500">Reserved for Withdrawals</p>
+            <p data-testid="income-reserved-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
+              {loading ? '...' : formatEtb(data?.reservedBalance ?? 0)}
+            </p>
+          </div>
+        </section>
 
         {statusMsg && (
           <div role="status" className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 flex items-center gap-2">
