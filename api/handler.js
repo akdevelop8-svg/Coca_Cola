@@ -1,5 +1,3 @@
-import { Readable } from "node:stream";
-
 export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
@@ -43,8 +41,11 @@ export default async function handler(req, res) {
   try {
     const init = { method, headers, redirect: "manual" };
     if (!["GET", "HEAD"].includes(method)) {
-      init.body = Readable.toWeb(req);
-      init.duplex = "half";
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      init.body = Buffer.concat(chunks);
     }
 
     const upstream = await fetch(target, init);
