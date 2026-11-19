@@ -528,12 +528,29 @@ async function route(request: Request): Promise<Response> {
 
   if (p === "onboarding/accept-terms" && method === "POST") {
     const app = await getAppSettings();
+    const acceptedVersion = String(body.termsVersion || app.settings.termsVersion);
+    if (!body.accepted || !acceptedVersion) {
+      throw new ApiError("Please confirm that you accept the current platform terms.", 400);
+    }
     await checked(db.from("terms_acceptances").upsert({
       id: uuid("trm_"), user_id: user.id,
-      terms_version: String(body.termsVersion || app.settings.termsVersion),
+      terms_version: acceptedVersion,
       accepted_at: nowIso(), ip_address: request.headers.get("x-forwarded-for")?.split(",")[0] || null,
     }, { onConflict: "user_id,terms_version" }));
-    return json({ success: true, termsAccepted: true });
+    const refreshedUser = await checked<any>(
+      db.from("users").select("*").eq("id", user.id).single(),
+    );
+    const profile = await profileFor(refreshedUser);
+    if (profile.termsAcceptedVersion !== acceptedVersion) {
+      throw new ApiError("Terms acceptance could not be verified. Please try again.", 503);
+    }
+    return json({
+      ok: true,
+      success: true,
+      termsAccepted: true,
+      acceptedVersion,
+      user: profile,
+    });
   }
 
   if (p === "profile/nickname" && method === "PUT") {

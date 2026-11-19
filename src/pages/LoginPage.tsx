@@ -38,7 +38,12 @@ export function LoginPage() {
       setUserState(res.user, res.unreadNotifications);
 
       if (isAdminRole(res.user.role)) {
-        navigate('/admin', { replace: true });
+        const latestVersion = config?.settings?.termsVersion || 'v1.0';
+        if (res.user.termsAcceptedVersion !== latestVersion) {
+          navigate(`/onboarding-terms?redirect=${encodeURIComponent('/admin')}`, { replace: true });
+        } else {
+          navigate('/admin', { replace: true });
+        }
         return;
       }
 

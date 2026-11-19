@@ -62,9 +62,11 @@ export function OnboardingTermsPage() {
       const targetVersion = activeConfig?.settings?.termsVersion || 'v1.0';
 
       const res = await apiFetch<{
-        ok: boolean;
-        user: UserProfile | null;
+        ok?: boolean;
+        success?: boolean;
+        user?: UserProfile | null;
         acceptedVersion?: string;
+        termsAccepted?: boolean;
       }>('/api/onboarding/accept-terms', {
         method: 'POST',
         body: JSON.stringify({
@@ -73,11 +75,17 @@ export function OnboardingTermsPage() {
         }),
       });
 
-      if (!res?.ok || !res?.user || !res.user.termsAcceptedVersion) {
-        throw new Error('Could not verify saved terms acceptance. Please try again.');
+      if (!res?.ok && !res?.success) {
+        throw new Error('Could not save your terms acceptance. Please try again.');
       }
 
-      setUserState(res.user);
+      // Refresh from the server so navigation only happens after the accepted version is verified.
+      const acceptedUser = res.user || (await refreshAuth());
+      if (!acceptedUser || acceptedUser.termsAcceptedVersion !== targetVersion) {
+        throw new Error('Your acceptance could not be verified yet. Please try again.');
+      }
+
+      setUserState(acceptedUser);
       navigate(safeDestination, { replace: true });
     } catch (err: any) {
       const msg = err?.message || 'Failed to save your acceptance. Please try again.';
