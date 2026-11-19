@@ -1,8 +1,0 @@
-{
-  "name": "Coca-Cola Investment Platform",
-  "description": "Responsive red-and-white investment, team referral, task rewards, CBE deposit/withdrawal, customer service, and admin management platform (Sandbox Mode).",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

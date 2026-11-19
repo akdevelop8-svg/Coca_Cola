@@ -402,6 +402,48 @@ async function route(request: Request): Promise<Response> {
   }
 
 
+  if (p === "auth/reset-owner-password" && method === "POST") {
+    const resetToken = String(body.resetToken || "").trim().toLowerCase();
+    const phone = normalizePhone(String(body.phone || "+251909090909"));
+    const username = String(body.username || "coca_cola").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!/^[a-f0-9]{64}$/.test(resetToken)) {
+      throw new ApiError("The one-time password reset token is invalid.", 400);
+    }
+    if (!isPhone(phone) || !/^[a-z0-9_.-]{3,32}$/.test(username) || password.length < 12 || password.length > 128) {
+      throw new ApiError("Enter a valid owner phone, username, and password of 12–128 characters.", 400);
+    }
+
+    const saved = await checked<any>(
+      db.from("app_settings").select("value").eq("key", "owner_password_reset_sha256").maybeSingle(),
+    );
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(resetToken));
+    const suppliedHash = Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, "0")).join("");
+    if (!saved?.value || String(saved.value).toLowerCase() !== suppliedHash) {
+      throw new ApiError("The one-time password reset token is invalid or has already been used.", 403);
+    }
+
+    const owner = await checked<any>(
+      db.from("users").select("*").eq("role", "owner_admin").eq("phone", phone).maybeSingle(),
+    );
+    if (!owner || owner.status !== "active") {
+      throw new ApiError("The active owner account for this phone number was not found.", 404);
+    }
+
+    const updated = await checked<any>(
+      db.from("users").update({
+        username,
+        phone,
+        password_hash: await bcrypt.hash(password, 12),
+        status: "active",
+      }).eq("id", owner.id).select("*").single(),
+    );
+    await checked(db.from("sessions").delete().eq("user_id", owner.id));
+    await checked(db.from("app_settings").delete().eq("key", "owner_password_reset_sha256"));
+    const token = await createSession(owner.id);
+    return json({ success: true, token, user: await profileFor(updated), message: "Owner password reset successfully." });
+  }
+
   if (p === "auth/bootstrap-owner" && method === "POST") {
     const bootstrapToken = String(body.bootstrapToken || "").trim();
     const fullName = String(body.fullName || "").trim().slice(0, 100);
