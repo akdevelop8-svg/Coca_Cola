@@ -225,14 +225,6 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            {config?.sandboxMode && (
-              <span
-                className="hidden sm:inline-block text-xs font-medium text-amber-700"
-                title="Running in Sandbox mode — no live bank transfers"
-              >
-                Sandbox Mode
-              </span>
-            )}
             <button
               type="button"
               onClick={() => navigate('/notifications')}

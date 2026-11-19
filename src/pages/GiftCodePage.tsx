@@ -4,12 +4,12 @@ import { ArrowLeft, CheckCircle2, Gift, ShieldAlert } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
-import { formatDemoCredits } from '../shared/finance';
+import { formatEtb } from '../shared/finance';
 import type { GiftCodeRedemptionRecord } from '../types';
 
 interface CustomerGiftCodeResponse {
   giftCodeEnabled: boolean;
-  demoBalance: number;
+  availableBalance: number;
   redemptions: GiftCodeRedemptionRecord[];
 }
 
@@ -58,7 +58,7 @@ export function GiftCodePage() {
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      const res = await apiFetch<{ message: string; demoBalance: number }>('/api/gift-codes/redeem', {
+      const res = await apiFetch<{ message: string; availableBalance: number }>('/api/gift-codes/redeem', {
         method: 'POST',
         body: JSON.stringify({ code: clean }),
       });
@@ -84,14 +84,14 @@ export function GiftCodePage() {
             <div>
               <h2 className="text-xl font-bold">Gift Code Redemption</h2>
               <p className="text-xs sm:text-sm text-white/85">
-                Redeem valid codes for ETB (Simulator Only · No cash value)
+                Redeem valid gift codes for ETB wallet rewards
               </p>
             </div>
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2 text-right">
             <p className="text-[11px] text-white/80">Wallet Balance</p>
-            <p data-testid="gift-demo-balance" className="text-base font-extrabold tabular-nums">
-              {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
+            <p data-testid="gift-wallet-balance" className="text-base font-extrabold tabular-nums">
+              {loading ? '...' : formatEtb(data?.availableBalance ?? 0)}
             </p>
           </div>
         </section>
@@ -181,7 +181,7 @@ export function GiftCodePage() {
                     </p>
                   </div>
                   <span className="font-bold text-emerald-700 tabular-nums">
-                    +{formatDemoCredits(r.rewardAmount)}
+                    +{formatEtb(r.rewardAmount)}
                   </span>
                 </div>
               ))}

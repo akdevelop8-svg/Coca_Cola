@@ -22,7 +22,7 @@ import {
   createNotification,
   db,
   getUserBalances,
-  getUserDemoWallet,
+  getUserWallet,
   grantRegistrationDemoBonus,
   isGiftCodeFeatureEnabled,
   logAdminAudit,
@@ -36,13 +36,13 @@ import {
   TEAM_VALUE_TASKS,
 } from '../src/shared/constants';
 import {
-  calculateReferralDemoRewards,
+  calculateReferralRewards,
   calculateWithdrawalBreakdown,
-  canPurchaseDemoPlan,
+  canPurchasePlan,
   computePlanProgress,
   computeTeamTaskLevels,
-  DEMO_DAILY_CHECKIN_AMOUNT,
-  DEMO_REGISTRATION_BONUS,
+  DAILY_CHECKIN_REWARD_ETB,
+  REGISTRATION_BONUS_ETB,
   evaluateGiftCodeEligibility,
   getCustomerDisplayName,
   getEthiopiaCalendarDate,
@@ -83,6 +83,20 @@ function isComplianceApproved(): boolean {
     | undefined;
   if (row) return row.value === 'true';
   return process.env.COMPLIANCE_APPROVED === 'true';
+}
+
+function requireLiveFinance(
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  if (isSandboxMode() || !isComplianceApproved()) {
+    res.status(503).json({
+      error: 'Financial operations are not enabled yet. The production database, sponsor funding, and required legal/compliance approvals must be verified first.',
+    });
+    return;
+  }
+  next();
 }
 
 function generateReferralCode(): string {
@@ -289,7 +303,7 @@ export function createApiRouter() {
   // ---------------------------------------------------------------------------
   // AUTHENTICATION ROUTES
   // ---------------------------------------------------------------------------
-  router.post('/auth/register', rateLimit(20, 60_000), (req, res) => {
+  router.post('/auth/register', rateLimit(20, 60_000), requireLiveFinance, (req, res) => {
     try {
       const { phone, password, confirmPassword, referralCode } = req.body || {};
       if (!phone || !validateEthiopiaPhone(String(phone))) {
@@ -338,7 +352,7 @@ export function createApiRouter() {
       const pwHash = hashPassword(password);
 
       const settings = getPlatformSettings();
-      const regBonus = Number(settings.registrationBonus) > 0 ? Number(settings.registrationBonus) : DEMO_REGISTRATION_BONUS;
+      const regBonus = Number(settings.registrationBonus) > 0 ? Number(settings.registrationBonus) : REGISTRATION_BONUS_ETB;
 
       const regTx = db.transaction(() => {
         db.prepare(
@@ -606,7 +620,7 @@ export function createApiRouter() {
     const userId = req.authUser!.id;
     refreshUserCompletedPlans(userId);
     const balances = getUserBalances(userId);
-    const demoWallet = getUserDemoWallet(userId);
+    const demoWallet = getUserWallet(userId);
     const activePlansCount = (
       db.prepare("SELECT COUNT(*) as c FROM plan_purchases WHERE user_id = ? AND status = 'active'").get(userId) as {
         c: number;
@@ -665,7 +679,7 @@ export function createApiRouter() {
     const userId = req.authUser!.id;
     const todayEth = getEthiopiaCalendarDate();
     const settings = getPlatformSettings();
-    const rewardAmount = Number(settings.dailyCheckinAmount) > 0 ? Number(settings.dailyCheckinAmount) : DEMO_DAILY_CHECKIN_AMOUNT;
+    const rewardAmount = Number(settings.dailyCheckinAmount) > 0 ? Number(settings.dailyCheckinAmount) : DAILY_CHECKIN_REWARD_ETB;
     const existing = db
       .prepare('SELECT id FROM daily_checkins WHERE user_id = ? AND ethiopia_date = ?')
       .get(userId, todayEth);
@@ -679,7 +693,7 @@ export function createApiRouter() {
         status: r.status,
         createdAt: r.created_at,
       }));
-    const demoWallet = getUserDemoWallet(userId);
+    const demoWallet = getUserWallet(userId);
     res.json({
       checkedInToday: Boolean(existing),
       ethiopiaDate: todayEth,
@@ -690,11 +704,11 @@ export function createApiRouter() {
   });
 
   // Manual Daily Check-In Claim (2 Demo ETB once per Ethiopia calendar day)
-  router.post('/checkin', requireAuth, (req: AuthenticatedRequest, res) => {
+  router.post('/checkin', requireAuth, requireLiveFinance, (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
     const todayEth = getEthiopiaCalendarDate();
     const settings = getPlatformSettings();
-    const checkinAmount = Number(settings.dailyCheckinAmount) > 0 ? Number(settings.dailyCheckinAmount) : DEMO_DAILY_CHECKIN_AMOUNT;
+    const checkinAmount = Number(settings.dailyCheckinAmount) > 0 ? Number(settings.dailyCheckinAmount) : DAILY_CHECKIN_REWARD_ETB;
     const now = new Date().toISOString();
 
     try {
@@ -743,7 +757,7 @@ export function createApiRouter() {
   });
 
   // Demo Investment Plan Purchase (Max 2 active plans, Demo ETB deducted atomically, 365-day manual claim)
-  router.post('/plans/purchase', requireAuth, (req: AuthenticatedRequest, res) => {
+  router.post('/plans/purchase', requireAuth, requireLiveFinance, (req: AuthenticatedRequest, res) => {
     const { planCode } = req.body || {};
     const plan = INVESTMENT_PLANS.find((p) => p.code === planCode);
     if (!plan) {
@@ -768,8 +782,8 @@ export function createApiRouter() {
           }
         ).c;
 
-        const demoWallet = getUserDemoWallet(userId);
-        const validation = canPurchaseDemoPlan(activeCount, demoWallet.demoBalance, plan.investment, MAX_ACTIVE_PLANS);
+        const demoWallet = getUserWallet(userId);
+        const validation = canPurchasePlan(activeCount, demoWallet.demoBalance, plan.investment, MAX_ACTIVE_PLANS);
         if (!validation.ok) {
           throw new Error(validation.error || 'Cannot complete plan purchase.');
         }
@@ -800,7 +814,7 @@ export function createApiRouter() {
         });
 
         // Referral Demo ETB Rewards (Level 1: 20%, Level 2: 2%, Level 3: 1%)
-        const rewardAmounts = calculateReferralDemoRewards(plan.investment, {
+        const rewardAmounts = calculateReferralRewards(plan.investment, {
           level1: Number(settings.referralLevel1Percent) || 20,
           level2: Number(settings.referralLevel2Percent) || 2,
           level3: Number(settings.referralLevel3Percent) || 1,
@@ -903,7 +917,7 @@ export function createApiRouter() {
     const demoTransactions = db
       .prepare(
         `SELECT id, user_id, type, amount_signed, balance_after, reference_id, note, created_at
-         FROM demo_credit_transactions
+         FROM ledger_entries
          WHERE user_id = ?
          ORDER BY created_at DESC LIMIT 150`
       )
@@ -919,7 +933,7 @@ export function createApiRouter() {
         createdAt: t.created_at,
       }));
 
-    const demoWallet = getUserDemoWallet(userId);
+    const demoWallet = getUserWallet(userId);
     res.json({
       activePlansCount: purchases.filter((p) => !p.isCompleted && p.status === 'active').length,
       myIncome: demoWallet.demoTotalEarnings,
@@ -931,7 +945,7 @@ export function createApiRouter() {
   });
 
   // Manual Daily Mining Claim per purchased plan (once per Ethiopia calendar day, disabled after 365 days)
-  router.post('/income/claim/:purchaseId', requireAuth, (req: AuthenticatedRequest, res) => {
+  router.post('/income/claim/:purchaseId', requireAuth, requireLiveFinance, (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
     const { purchaseId } = req.params;
     const todayEth = getEthiopiaCalendarDate();
@@ -1044,7 +1058,7 @@ export function createApiRouter() {
     const all = [...level1, ...level2, ...level3];
     const qualifyingMembers = all.filter((m) => m.qualified);
     const totalQualifyingVolume = qualifyingMembers.reduce((sum, m) => sum + m.qualifyingPurchaseValue, 0);
-    const demoWallet = getUserDemoWallet(userId);
+    const demoWallet = getUserWallet(userId);
 
     res.json({
       invitationCode: req.authUser!.referralCode,
@@ -1110,7 +1124,7 @@ export function createApiRouter() {
     });
   });
 
-  router.post('/tasks/claim', requireAuth, (req: AuthenticatedRequest, res) => {
+  router.post('/tasks/claim', requireAuth, requireLiveFinance, (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
     const { taskId } = req.body || {};
     const task = TEAM_VALUE_TASKS.find((t) => t.id === taskId);
@@ -1229,6 +1243,7 @@ export function createApiRouter() {
   router.post(
     '/deposits',
     requireAuth,
+    requireLiveFinance,
     (req: AuthenticatedRequest, res, next) => {
       upload.single('receipt')(req, res, (err: any) => {
         if (err) {
@@ -1270,8 +1285,8 @@ export function createApiRouter() {
       }
 
       const dupRef = db
-        .prepare("SELECT id FROM deposits WHERE LOWER(tx_reference) = LOWER(?) AND status != 'rejected'")
-        .get(cleanRef);
+        .prepare("SELECT id FROM deposits WHERE payment_method_id = ? AND LOWER(tx_reference) = LOWER(?) AND status != 'rejected'")
+        .get(method.id, cleanRef);
       if (dupRef) {
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(409).json({ error: 'This transaction reference has already been submitted.' });
@@ -1489,7 +1504,7 @@ export function createApiRouter() {
     res.json({ withdrawals: rows });
   });
 
-  router.post('/withdrawals', requireAuth, (req: AuthenticatedRequest, res) => {
+  router.post('/withdrawals', requireAuth, requireLiveFinance, (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
     const settings = getPlatformSettings();
 
@@ -1902,6 +1917,7 @@ export function createApiRouter() {
     '/admin/deposits/:id/approve',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
+    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const dep = db.prepare('SELECT * FROM deposits WHERE id = ?').get(req.params.id) as any;
       if (!dep) {
@@ -1966,6 +1982,7 @@ export function createApiRouter() {
     '/admin/deposits/:id/reject',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
+    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
       if (reason.length < 3) {
@@ -2054,6 +2071,7 @@ export function createApiRouter() {
     '/admin/withdrawals/:id/approve',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
+    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const wdr = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(req.params.id) as any;
       if (!wdr) {
@@ -2061,59 +2079,39 @@ export function createApiRouter() {
         return;
       }
       if (wdr.status !== 'pending') {
-        res.status(409).json({ error: `Withdrawal is already ${wdr.status}.` });
+        res.status(409).json({ error: 'Withdrawal is already ' + wdr.status + '.' });
         return;
       }
 
-      const providerRef =
-        typeof req.body?.providerReference === 'string' && req.body.providerReference.trim()
-          ? req.body.providerReference.trim()
-          : `CBE-${Date.now().toString().slice(-6)}`;
-
+      // Approval authorizes a manual bank transfer only. Funds stay reserved
+      // until the actual bank reference is recorded as completed.
       const now = new Date().toISOString();
       const tx = db.transaction(() => {
-        const upd = db
-          .prepare(
-            "UPDATE withdrawals SET status = 'approved', provider_reference = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND status = 'pending'"
-          )
-          .run(providerRef, req.authUser!.id, now, wdr.id);
-        if (upd.changes !== 1) {
-          throw new Error('Withdrawal already reviewed.');
-        }
-
-        const current = getUserBalances(wdr.user_id);
-        db.prepare(
-          `INSERT INTO ledger_entries (id, user_id, type, amount_signed, reserved_delta, balance_after, status, reference_id, note, idempotency_key, created_at)
-           VALUES (?, ?, 'withdrawal_settle', 0, ?, ?, 'posted', ?, ?, ?, ?)`
-        ).run(
-          `ldg_${crypto.randomUUID()}`,
-          wdr.user_id,
-          -wdr.gross_amount,
-          current.availableBalance,
-          wdr.id,
-          `Approved withdrawal payout (${wdr.method_name}, Ref: ${providerRef})`,
-          `wdr_approve:${wdr.id}`,
-          now
-        );
+        const upd = db.prepare(
+          "UPDATE withdrawals SET status = 'approved', provider_reference = NULL, reviewed_by = ?, reviewed_at = ? WHERE id = ? AND status = 'pending'"
+        ).run(req.authUser!.id, now, wdr.id);
+        if (upd.changes !== 1) throw new Error('Withdrawal already reviewed.');
 
         createNotification(
           wdr.user_id,
           'Withdrawal Approved',
-          `Your ${wdr.method_name} withdrawal of Br ${wdr.gross_amount.toLocaleString()} (Net: Br ${wdr.net_amount.toLocaleString()}) has been approved. Ref: ${providerRef}.`,
+          'Your ' + wdr.method_name + ' withdrawal of Br ' + wdr.gross_amount.toLocaleString() +
+            ' (Net: Br ' + wdr.net_amount.toLocaleString() +
+            ') has been approved. The Admin will make the bank transfer manually. Funds remain reserved until the transfer is recorded as completed.',
           'withdrawal_approved',
           '/withdraw'
         );
-
         logAdminAudit(req.authUser!.id, req.authUser!.role, 'approve_withdrawal', 'withdrawal', wdr.id, {
           userId: wdr.user_id,
           grossAmount: wdr.gross_amount,
           netAmount: wdr.net_amount,
-          providerRef,
+          transferMethod: 'manual_bank_transfer',
+          fundsRemainReserved: true,
         });
       });
       try {
         tx();
-        res.json({ ok: true });
+        res.json({ ok: true, fundsRemainReserved: true });
       } catch (err: any) {
         res.status(409).json({ error: err?.message || 'Could not approve withdrawal.' });
       }
@@ -2124,6 +2122,7 @@ export function createApiRouter() {
     '/admin/withdrawals/:id/complete',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
+    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const targetStatus = req.body?.status === 'processed' ? 'processed' : 'completed';
       const wdr = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(req.params.id) as any;
@@ -2148,36 +2147,65 @@ export function createApiRouter() {
         return;
       }
 
-      const providerRef =
-        typeof req.body?.providerReference === 'string' && req.body.providerReference.trim()
-          ? req.body.providerReference.trim()
-          : wdr.provider_reference;
-
-      const now = new Date().toISOString();
-      if (targetStatus === 'processed') {
-        db.prepare(
-          `UPDATE withdrawals SET status = 'processed', provider_reference = ?, processed_at = ? WHERE id = ?`
-        ).run(providerRef, now, wdr.id);
-      } else {
-        db.prepare(
-          `UPDATE withdrawals SET status = 'completed', provider_reference = ?, processed_at = COALESCE(processed_at, ?), completed_at = ?, completed_by = ? WHERE id = ?`
-        ).run(providerRef, now, now, req.authUser!.id, wdr.id);
+      const bankReference = typeof req.body?.providerReference === 'string'
+        ? req.body.providerReference.trim()
+        : '';
+      if (!bankReference) {
+        res.status(400).json({ error: 'Enter the actual bank transfer reference after making the manual bank transfer.' });
+        return;
       }
 
-      createNotification(
-        wdr.user_id,
-        targetStatus === 'processed' ? 'Withdrawal Processing Update' : 'Withdrawal Completed',
-        `Your withdrawal of Br ${wdr.net_amount.toLocaleString()} net payout (${wdr.method_name}) has been marked as ${targetStatus}.${providerRef ? ` Ref: ${providerRef}` : ''}`,
-        `withdrawal_${targetStatus}`,
-        '/withdraw'
-      );
+      const now = new Date().toISOString();
+      const tx = db.transaction(() => {
+        if (targetStatus === 'processed') {
+          const updated = db.prepare(
+            "UPDATE withdrawals SET status = 'processed', provider_reference = ?, processed_at = ? WHERE id = ? AND status = 'approved'"
+          ).run(bankReference, now, wdr.id);
+          if (updated.changes !== 1) throw new Error('Withdrawal status changed. Refresh and try again.');
+        } else {
+          const updated = db.prepare(
+            "UPDATE withdrawals SET status = 'completed', provider_reference = ?, processed_at = COALESCE(processed_at, ?), completed_at = ?, completed_by = ? WHERE id = ? AND status IN ('approved', 'processed')"
+          ).run(bankReference, now, now, req.authUser!.id, wdr.id);
+          if (updated.changes !== 1) throw new Error('Withdrawal status changed. Refresh and try again.');
 
-      logAdminAudit(req.authUser!.id, req.authUser!.role, `mark_withdrawal_${targetStatus}`, 'withdrawal', wdr.id, {
-        userId: wdr.user_id,
-        providerRef,
+          const current = getUserBalances(wdr.user_id);
+          db.prepare(
+            "INSERT INTO ledger_entries (id, user_id, type, amount_signed, reserved_delta, balance_after, status, reference_id, note, idempotency_key, created_at) " +
+            "VALUES (?, ?, 'withdrawal_settle', 0, ?, ?, 'posted', ?, ?, ?, ?)"
+          ).run(
+            'ldg_' + crypto.randomUUID(),
+            wdr.user_id,
+            -wdr.gross_amount,
+            current.availableBalance,
+            wdr.id,
+            'Manual bank transfer completed (' + wdr.method_name + ', bank reference: ' + bankReference + ')',
+            'wdr_settle:' + wdr.id,
+            now
+          );
+        }
+
+        createNotification(
+          wdr.user_id,
+          targetStatus === 'processed' ? 'Withdrawal Processing Update' : 'Withdrawal Completed',
+          targetStatus === 'processed'
+            ? 'Your withdrawal of Br ' + wdr.net_amount.toLocaleString() + ' net payout (' + wdr.method_name + ') is being processed manually. Bank Ref: ' + bankReference
+            : 'Your withdrawal of Br ' + wdr.net_amount.toLocaleString() + ' net payout (' + wdr.method_name + ') has been marked completed. Bank Ref: ' + bankReference,
+          'withdrawal_' + targetStatus,
+          '/withdraw'
+        );
+        logAdminAudit(req.authUser!.id, req.authUser!.role, 'mark_withdrawal_' + targetStatus, 'withdrawal', wdr.id, {
+          userId: wdr.user_id,
+          bankReference,
+          transferMethod: 'manual_bank_transfer',
+        });
       });
 
-      res.json({ ok: true, status: targetStatus });
+      try {
+        tx();
+        res.json({ ok: true, status: targetStatus });
+      } catch (err: any) {
+        res.status(409).json({ error: err?.message || 'Could not update withdrawal status.' });
+      }
     }
   );
 
@@ -2185,6 +2213,7 @@ export function createApiRouter() {
     '/admin/withdrawals/:id/reject',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
+    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
       if (reason.length < 3) {
@@ -3262,7 +3291,7 @@ export function createApiRouter() {
         rewardAmount: r.reward_amount,
         redeemedAt: r.redeemed_at,
       }));
-    const demoWallet = getUserDemoWallet(userId);
+    const demoWallet = getUserWallet(userId);
     res.json({
       giftCodeEnabled: isEnabled,
       demoBalance: demoWallet.demoBalance,
@@ -3270,7 +3299,7 @@ export function createApiRouter() {
     });
   });
 
-  router.post('/gift-codes/redeem', requireAuth, rateLimit(20, 60_000), (req: AuthenticatedRequest, res) => {
+  router.post('/gift-codes/redeem', requireAuth, requireLiveFinance, rateLimit(20, 60_000), (req: AuthenticatedRequest, res) => {
     const userId = req.authUser!.id;
     const rawCode = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
     if (!rawCode) {

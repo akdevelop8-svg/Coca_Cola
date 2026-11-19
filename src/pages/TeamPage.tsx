@@ -4,7 +4,7 @@ import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { SUPPLIED_ASSETS } from '../shared/constants';
-import { formatDemoCredits, getCustomerDisplayName } from '../shared/finance';
+import { formatEtb, getCustomerDisplayName } from '../shared/finance';
 
 interface TeamMemberItem {
   id: string;
@@ -127,7 +127,7 @@ export function TeamPage() {
             <TrendingUp className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
             <p className="text-[11px] sm:text-xs text-slate-500">Team Income</p>
             <p className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
-              {loading ? '...' : formatDemoCredits(data?.summary.teamCommission ?? 0)}
+              {loading ? '...' : formatEtb(data?.summary.teamCommission ?? 0)}
             </p>
           </div>
         </div>
@@ -220,13 +220,13 @@ export function TeamPage() {
             <div className="py-2 flex justify-between">
               <span className="text-slate-600">Qualifying Plan Volume</span>
               <strong className="tabular-nums">
-                {formatDemoCredits(data?.summary.totalQualifyingVolume ?? 0)}
+                {formatEtb(data?.summary.totalQualifyingVolume ?? 0)}
               </strong>
             </div>
             <div className="py-2 flex justify-between">
               <span className="text-slate-600">Team Commission Earned</span>
               <strong className="tabular-nums">
-                {formatDemoCredits(data?.summary.teamCommission ?? 0)}
+                {formatEtb(data?.summary.teamCommission ?? 0)}
               </strong>
             </div>
           </div>
@@ -262,7 +262,7 @@ export function TeamPage() {
           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>
-              Private member details are masked. Referral rewards in ETB trigger only when referred members purchase a Plan (never on registration alone) and have no cash value.
+              Private member details are masked. Referral rewards are credited only after a qualifying plan purchase is recorded and remain subject to platform rules and funding availability.
             </span>
           </div>
 
@@ -285,7 +285,7 @@ export function TeamPage() {
                       {m.qualifyingStatus}
                     </p>
                     <p className="text-xs text-slate-500 tabular-nums">
-                      Plan Volume: {formatDemoCredits(m.qualifyingPurchaseValue)}
+                      Plan Volume: {formatEtb(m.qualifyingPurchaseValue)}
                     </p>
                   </div>
                 </div>

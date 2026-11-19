@@ -21,9 +21,9 @@ import { InvestNowButton } from '../components/InvestNowButton';
 import { useAuth } from '../context/AuthContext';
 import { INVESTMENT_PLANS, SUPPLIED_ASSETS, type InvestmentPlanDef } from '../shared/constants';
 import {
-  DEMO_DAILY_CHECKIN_AMOUNT,
-  DEMO_REGISTRATION_BONUS,
-  formatDemoCredits,
+  DAILY_CHECKIN_REWARD_ETB,
+  REGISTRATION_BONUS_ETB,
+  formatEtb,
   getCustomerDisplayName,
   MAX_ACTIVE_PLANS,
 } from '../shared/finance';
@@ -116,7 +116,7 @@ export function HomePage() {
       });
       setPurchaseResult({
         ok: true,
-        text: `${selectedPlan.name} activated with ${formatDemoCredits(selectedPlan.investment)}. Visit Income to manually claim daily mining.`,
+        text: `${selectedPlan.name} activated with ${formatEtb(selectedPlan.investment)}. Visit Income to manually claim daily mining.`,
       });
       await loadSummary();
     } catch (err: any) {
@@ -221,18 +221,6 @@ export function HomePage() {
           )}
         </section>
 
-        {/* Sandbox Simulator Clear Notice */}
-        <div
-          data-testid="sandbox-simulator-disclaimer"
-          className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-center gap-2.5"
-        >
-          <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>
-            <strong>Sandbox Simulator Only:</strong> Rewards, daily check-ins, and plan calculations operate strictly in{' '}
-            <strong>simulated ETB</strong> (no cash value, no guaranteed financial returns, not withdrawable money).
-          </span>
-        </div>
-
         {/* B. FOUR ACCOUNT SUMMARY CARDS */}
         <section aria-label="Account Summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
@@ -251,7 +239,7 @@ export function HomePage() {
             <div className="mt-3">
               <p className="text-xs text-slate-500">Wallet Balance</p>
               <p data-testid="summary-balance" className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
-                {loadingSummary ? '...' : formatDemoCredits(summary?.demoBalance ?? 0)}
+                {loadingSummary ? '...' : formatEtb(summary?.availableBalance ?? 0)}
               </p>
             </div>
           </div>
@@ -272,7 +260,7 @@ export function HomePage() {
             <div className="mt-3">
               <p className="text-xs text-slate-500">Mining Earnings</p>
               <p className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
-                {loadingSummary ? '...' : formatDemoCredits(summary?.demoTotalEarnings ?? 0)}
+                {loadingSummary ? '...' : formatEtb(summary?.totalEarnings ?? 0)}
               </p>
             </div>
           </div>
@@ -314,7 +302,7 @@ export function HomePage() {
             <div className="mt-3">
               <p className="text-xs text-slate-500">Total Rewards</p>
               <p className="text-base sm:text-lg font-extrabold text-slate-900 tabular-nums mt-0.5">
-                {loadingSummary ? '...' : formatDemoCredits(summary?.demoTotalRewards ?? 0)}
+                {loadingSummary ? '...' : formatEtb(summary?.totalRewards ?? 0)}
               </p>
             </div>
           </div>
@@ -389,8 +377,8 @@ export function HomePage() {
           )}
         </section>
 
-        {/* D. DEMO SIMULATOR RULES OVERVIEW */}
-        <section aria-label="Simulator Rules Overview" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* D. PLATFORM REWARDS & EARNINGS OVERVIEW */}
+        <section aria-label="Platform Rewards and Earnings Overview" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-50 text-[#D71920] flex items-center justify-center shrink-0">
               <Gift className="w-5 h-5" />
@@ -398,7 +386,7 @@ export function HomePage() {
             <div>
               <p className="text-[11px] text-slate-500">Registration Bonus</p>
               <p className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums">
-                {formatDemoCredits(settings?.registrationBonus ?? DEMO_REGISTRATION_BONUS)}
+                {formatEtb(settings?.registrationBonus ?? REGISTRATION_BONUS_ETB)}
               </p>
             </div>
           </div>
@@ -423,7 +411,7 @@ export function HomePage() {
             <div>
               <p className="text-[11px] text-slate-500">Daily Check-In</p>
               <p className="text-xs sm:text-sm font-bold text-slate-900 tabular-nums">
-                {formatDemoCredits(settings?.dailyCheckinAmount ?? DEMO_DAILY_CHECKIN_AMOUNT)} / Day
+                {formatEtb(settings?.dailyCheckinAmount ?? DAILY_CHECKIN_REWARD_ETB)} / Day
               </p>
             </div>
           </div>
@@ -467,10 +455,10 @@ export function HomePage() {
 
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
             <span>
-              Simulated plans use <strong>ETB balance only</strong> (max {MAX_ACTIVE_PLANS} active plans, 365-day manual daily claim).
+              Plans are purchased from your available ETB wallet balance (max {MAX_ACTIVE_PLANS} active plans, 365-day manual daily claim).
             </span>
             <span className="font-semibold text-slate-900 tabular-nums">
-              Available: {formatDemoCredits(summary?.demoBalance ?? 0)}
+              Available: {formatEtb(summary?.availableBalance ?? 0)}
             </span>
           </div>
 
@@ -508,13 +496,13 @@ export function HomePage() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-slate-500">Investment:</span>
                       <span className="font-bold text-slate-900 tabular-nums text-right">
-                        {formatDemoCredits(plan.investment)}
+                        {formatEtb(plan.investment)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-slate-500">Daily Mining:</span>
                       <span className="font-bold text-[#D71920] tabular-nums text-right">
-                        {formatDemoCredits(plan.dailyMining)}
+                        {formatEtb(plan.dailyMining)}
                       </span>
                     </div>
                   </div>
@@ -567,13 +555,13 @@ export function HomePage() {
                 <div className="flex justify-between gap-2">
                   <span className="text-slate-500">Amount to Deduct</span>
                   <strong className="tabular-nums text-slate-900">
-                    {formatDemoCredits(selectedPlan.investment)}
+                    {formatEtb(selectedPlan.investment)}
                   </strong>
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-slate-500">Daily Mining (Manual Claim)</span>
                   <strong className="text-[#D71920] tabular-nums">
-                    {formatDemoCredits(selectedPlan.dailyMining)} / day
+                    {formatEtb(selectedPlan.dailyMining)} / day
                   </strong>
                 </div>
                 <div className="flex justify-between gap-2">
@@ -582,7 +570,7 @@ export function HomePage() {
                 </div>
                 <div className="flex justify-between gap-2 pt-2 border-t border-slate-200">
                   <span className="text-slate-500">Your Wallet Balance</span>
-                  <strong className="tabular-nums">{formatDemoCredits(summary?.demoBalance ?? 0)}</strong>
+                  <strong className="tabular-nums">{formatEtb(summary?.availableBalance ?? 0)}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-slate-500">Active Plans Held</span>
@@ -593,7 +581,7 @@ export function HomePage() {
               </div>
 
               <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                <strong>Sandbox Simulator:</strong> Deducts simulated ETB only. No real money or cash payout is involved. Daily rewards require manual claiming on the Income page.
+                <strong>Wallet note:</strong> Balances reflect posted wallet transactions. Daily rewards must be claimed manually on the Income page.
               </div>
 
               {purchaseResult && (

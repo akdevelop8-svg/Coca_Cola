@@ -62,9 +62,6 @@ export function LoginPage() {
       <div className="relative lg:w-1/2 bg-gradient-to-br from-[#E11D24] via-[#B80D13] to-[#7A0407] text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <CocaColaScriptLogo color="#FFFFFF" className="h-10 sm:h-12" />
-          {config?.sandboxMode && (
-            <span className="text-xs font-medium text-amber-200">Sandbox Environment</span>
-          )}
         </div>
 
         <div className="relative z-10 my-8 lg:my-auto max-w-md">
@@ -85,7 +82,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative z-10 text-xs text-white/75">
-          Protected authentication · Ethiopia (+251) · Sandbox Mode
+          Protected authentication · Ethiopia (+251)
         </p>
       </div>
 

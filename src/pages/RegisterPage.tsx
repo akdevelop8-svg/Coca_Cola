@@ -79,9 +79,6 @@ export function RegisterPage() {
       <div className="relative lg:w-1/2 bg-gradient-to-br from-[#E11D24] via-[#B80D13] to-[#7A0407] text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <CocaColaScriptLogo color="#FFFFFF" className="h-10 sm:h-12" />
-          {config?.sandboxMode && (
-            <span className="text-xs font-medium text-amber-200">Sandbox Environment</span>
-          )}
         </div>
 
         <div className="relative z-10 my-8 lg:my-auto max-w-md">
@@ -112,7 +109,7 @@ export function RegisterPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Register</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Start your account in Sandbox mode</p>
+              <p className="text-sm text-slate-500 mt-0.5">Create your platform account</p>
             </div>
             <div className="flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
               <Link

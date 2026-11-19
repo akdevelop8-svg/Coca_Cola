@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, FileText, ShieldAlert } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { CocaColaScriptLogo } from '../components/BrandMark';
-import { formatBr, formatDemoCredits, isSafeRedirectPath } from '../shared/finance';
+import { formatBr, formatEtb, isSafeRedirectPath } from '../shared/finance';
 import type { UserProfile } from '../types';
 
 export function OnboardingTermsPage() {
@@ -20,7 +20,7 @@ export function OnboardingTermsPage() {
   const submittingRef = useRef(false);
   const alertRef = useRef<HTMLDivElement | null>(null);
 
-  const latestVersion = config?.settings?.termsVersion || 'v1.0-sandbox';
+  const latestVersion = config?.settings?.termsVersion || 'v1.0';
 
   // Already accepted users must never repeatedly see the onboarding screen
   useEffect(() => {
@@ -59,7 +59,7 @@ export function OnboardingTermsPage() {
 
     try {
       const activeConfig = config || (await refreshConfig());
-      const targetVersion = activeConfig?.settings?.termsVersion || 'v1.0-sandbox';
+      const targetVersion = activeConfig?.settings?.termsVersion || 'v1.0';
 
       const res = await apiFetch<{
         ok: boolean;
@@ -117,13 +117,8 @@ export function OnboardingTermsPage() {
           <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
             <div className="text-xs sm:text-sm text-amber-900">
-              <p className="font-semibold">Sandbox Simulator Notice</p>
-              <p className="mt-1">
-                All reward balances, gift codes, daily check-ins, investment-plan simulations, and referral rewards
-                operate strictly in <strong>simulated ETB only</strong>. Simulated ETB has{' '}
-                <strong>no real cash value</strong>, is <strong>not real cash</strong>, and is{' '}
-                <strong>not withdrawable</strong>.
-              </p>
+              <p className="font-semibold">Wallet & Rewards Notice</p>
+              <p className="mt-1">Wallet entries are recorded in the platform ledger. Deposits are credited only after administrator verification. Withdrawals require administrator approval and a completed manual bank transfer. Daily rewards must be claimed manually and depend on active plan eligibility. No return is guaranteed.</p>
             </div>
           </div>
 
@@ -132,14 +127,14 @@ export function OnboardingTermsPage() {
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
               <p className="text-[11px] text-slate-500">Registration Bonus</p>
               <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">
-                {formatDemoCredits(settings?.registrationBonus ?? 150)}
+                {formatEtb(settings?.registrationBonus ?? 150)}
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Simulated ETB only</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">ETB wallet balance</p>
             </div>
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
               <p className="text-[11px] text-slate-500">Daily Check-In</p>
               <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">
-                +{formatDemoCredits(settings?.dailyCheckinAmount ?? 2)}
+                +{formatEtb(settings?.dailyCheckinAmount ?? 2)}
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">Manual claim daily</p>
             </div>
@@ -185,9 +180,9 @@ export function OnboardingTermsPage() {
             className="h-44 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed"
           >
             <p>
-              <strong>1. Sandbox Simulator &amp; Non-Cash Policy:</strong> Investment plan simulations (600 to
+              <strong>1. Wallet, Deposits &amp; Withdrawals:</strong> Investment plans (600 to
               1,000,000 ETB), daily check-ins (2 ETB), daily mining claims, gift codes, and referral
-              rewards operate in simulated ETB only. They do not represent real cash, guaranteed returns, withdrawable
+              rewards operate in ETB wallet amounts. They do not represent real cash, guaranteed returns, withdrawable
               money, or an endorsement by The Coca-Cola Company.
             </p>
             <p>
@@ -198,7 +193,7 @@ export function OnboardingTermsPage() {
             <p>
               <strong>3. Verified Deposits &amp; Withdrawals:</strong> Real deposit submissions to{' '}
               {config?.activeDepositMethods?.[0]?.accountNumber || settings?.depositCbeAccountNumber || '1000673029578'}{' '}
-              require unique transaction references and Admin verification. Simulated reward balances remain separate and cannot be
+              require unique transaction references and administrator verification. Wallet rewards are tracked in the platform ledger and remain subject to
               withdrawn as cash.
             </p>
             <p>
@@ -227,7 +222,7 @@ export function OnboardingTermsPage() {
             />
             <span className="text-sm text-slate-800 select-none">
               I have read and understand the Platform Terms &amp; Summary ({latestVersion}),
-              fees, eligibility rules, and Sandbox status.
+              fees, eligibility rules, and whether financial operations are enabled.
             </span>
           </label>
 

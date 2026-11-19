@@ -12,7 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiFetch } from '../../api/client';
-import { formatBrExact, formatDemoCredits } from '../../shared/finance';
+import { formatBrExact, formatEtb } from '../../shared/finance';
 import type { CustomerDetailProfile } from '../../types';
 
 interface CustomerDetailModalProps {
@@ -396,10 +396,10 @@ export function CustomerDetailModal({
                           <div key={p.id} className="py-2 flex items-center justify-between gap-2">
                             <div>
                               <p className="font-bold text-slate-900">
-                                Plan {p.planCode} · {formatDemoCredits(p.amount)}
+                                Plan {p.planCode} · {formatEtb(p.amount)}
                               </p>
                               <p className="text-slate-500">
-                                Daily: {formatDemoCredits(p.dailyMiningRate)} · {p.periodDays} days
+                                Daily: {formatEtb(p.dailyMiningRate)} · {p.periodDays} days
                               </p>
                             </div>
                             <span className="px-2 py-0.5 rounded-full bg-slate-100 font-semibold uppercase">

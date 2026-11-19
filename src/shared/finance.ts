@@ -1,7 +1,7 @@
 export const MAX_ACTIVE_PLANS = 2;
-export const DEMO_PLAN_DURATION_DAYS = 365;
-export const DEMO_REGISTRATION_BONUS = 150;
-export const DEMO_DAILY_CHECKIN_AMOUNT = 2;
+export const PLAN_DURATION_DAYS = 365;
+export const REGISTRATION_BONUS_ETB = 150;
+export const DAILY_CHECKIN_REWARD_ETB = 2;
 
 export function formatBr(amount: number, showDecimals = false): string {
   const safe = Number.isFinite(amount) ? amount : 0;
@@ -18,7 +18,7 @@ export function formatBrExact(amount: number): string {
   return formatBr(safe, hasFraction);
 }
 
-export function formatDemoCredits(amount: number): string {
+export function formatEtb(amount: number): string {
   const safe = Number.isFinite(amount) ? amount : 0;
   const hasFraction = Math.abs(safe % 1) > 0.001;
   const formatted = new Intl.NumberFormat('en-US', {
@@ -28,7 +28,7 @@ export function formatDemoCredits(amount: number): string {
   return `${formatted} ETB`;
 }
 
-export const formatDemoEtb = formatDemoCredits;
+
 
 export interface WithdrawalBreakdown {
   grossAmount: number;
@@ -147,7 +147,7 @@ export function computePlanProgress(
     ? getEthiopiaCalendarDate()
     : getEthiopiaCalendarDate(parsed);
   const rawElapsed = ethiopiaDateDiffDays(startDateIso, targetEthDate);
-  const safePeriod = Math.max(1, periodDays || DEMO_PLAN_DURATION_DAYS);
+  const safePeriod = Math.max(1, periodDays || PLAN_DURATION_DAYS);
   const daysElapsed = Math.max(0, Math.min(safePeriod, rawElapsed));
   const remainingDays = Math.max(0, safePeriod - daysElapsed);
   const isCompleted = rawElapsed >= safePeriod;
@@ -168,9 +168,9 @@ export function computePlanProgress(
   };
 }
 
-export function canPurchaseDemoPlan(
+export function canPurchasePlan(
   activePlansCount: number,
-  demoBalance: number,
+  availableBalance: number,
   planInvestment: number,
   maxActivePlans = MAX_ACTIVE_PLANS
 ): { ok: boolean; error?: string } {
@@ -180,10 +180,10 @@ export function canPurchaseDemoPlan(
       error: `Purchase limit reached: maximum ${maxActivePlans} active plans allowed per customer.`,
     };
   }
-  if (!Number.isFinite(demoBalance) || demoBalance < planInvestment) {
+  if (!Number.isFinite(availableBalance) || availableBalance < planInvestment) {
     return {
       ok: false,
-      error: `Insufficient ETB. You need ${formatDemoCredits(planInvestment)}, available ${formatDemoCredits(Math.max(0, demoBalance))}.`,
+      error: `Insufficient ETB. You need ${formatEtb(planInvestment)}, available ${formatEtb(Math.max(0, availableBalance))}.`,
     };
   }
   return { ok: true };
@@ -232,7 +232,7 @@ export function evaluateGiftCodeEligibility(
   return { ok: true, status: 200 };
 }
 
-export function calculateReferralDemoRewards(
+export function calculateReferralRewards(
   planInvestment: number,
   rates = { level1: 20, level2: 2, level3: 1 }
 ): { level1: number; level2: number; level3: number } {

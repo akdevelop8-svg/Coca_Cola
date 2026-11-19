@@ -119,17 +119,6 @@ export function RechargePage() {
   return (
     <AppShell title="Recharge / Deposit">
       <div className="space-y-5">
-        {config?.sandboxMode && (
-          <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <div className="text-xs sm:text-sm text-amber-900">
-              <p className="font-semibold">Sandbox Deposit Review Mode</p>
-              <p className="mt-0.5">
-                Deposits are submitted to the Admin Dashboard for verification. Your wallet is credited only after Admin approval.
-              </p>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Deposit Account Information & Form */}

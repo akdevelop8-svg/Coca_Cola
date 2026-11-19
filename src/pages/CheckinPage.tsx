@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { CalendarCheck, CheckCircle2, Clock, Coins, ShieldCheck } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
-import { formatDemoCredits } from '../shared/finance';
+import { formatEtb } from '../shared/finance';
 
 interface CheckinStatusResponse {
   checkedInToday: boolean;
   ethiopiaDate: string;
   rewardAmount: number;
-  demoBalance: number;
+  availableBalance: number;
   history: Array<{
     id: string;
     ethiopiaDate: string;
@@ -48,7 +48,7 @@ export function CheckinPage() {
     setStatusMsg('');
     setErrorMsg('');
     try {
-      const res = await apiFetch<{ message: string; demoBalance: number }>('/api/checkin', {
+      const res = await apiFetch<{ message: string; availableBalance: number }>('/api/checkin', {
         method: 'POST',
       });
       setStatusMsg(res.message);
@@ -81,21 +81,12 @@ export function CheckinPage() {
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2.5 text-right">
             <p className="text-[11px] text-white/80">Wallet Balance</p>
-            <p data-testid="checkin-demo-balance" className="text-base sm:text-lg font-extrabold tabular-nums">
-              {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
+            <p data-testid="checkin-wallet-balance" className="text-base sm:text-lg font-extrabold tabular-nums">
+              {loading ? '...' : formatEtb(data?.availableBalance ?? 0)}
             </p>
           </div>
         </section>
 
-        {/* Sandbox Simulator Disclaimer */}
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-start gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <p>
-            <strong>Sandbox Simulator:</strong> Opening the app or this page never automatically awards ETB.
-            Press <strong>CLAIM</strong> below once per calendar day (Ethiopia time: Africa/Addis_Ababa) to collect{' '}
-            <strong>{data?.rewardAmount ?? 2} ETB</strong>. Simulated ETB has no cash value and is not withdrawable.
-          </p>
-        </div>
 
         {statusMsg && (
           <div role="status" className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2">
@@ -170,7 +161,7 @@ export function CheckinPage() {
                     </p>
                   </div>
                   <span className="font-bold text-emerald-700 tabular-nums">
-                    +{formatDemoCredits(item.amount)}
+                    +{formatEtb(item.amount)}
                   </span>
                 </div>
               ))}

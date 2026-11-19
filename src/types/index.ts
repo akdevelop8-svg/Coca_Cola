@@ -31,10 +31,6 @@ export interface WalletSummary {
   totalEarnings: number;
   totalRewards: number;
   teamCommission: number;
-  demoBalance: number;
-  demoTotalEarnings: number;
-  demoTotalRewards: number;
-  demoTeamCommission: number;
   activePlansCount: number;
   maxActivePlans: number;
   teamMembersCount: number;
@@ -43,7 +39,7 @@ export interface WalletSummary {
   todayEthiopiaDate: string;
 }
 
-export interface DemoCreditTransaction {
+export interface LedgerTransaction {
   id: string;
   userId: string;
   type:
@@ -53,7 +49,11 @@ export interface DemoCreditTransaction {
     | 'plan_purchase'
     | 'daily_mining_claim'
     | 'referral_reward'
-    | 'task_reward';
+    | 'task_reward'
+    | 'deposit_credit'
+    | 'withdrawal_reserve'
+    | 'withdrawal_settle'
+    | 'withdrawal_release';
   amountSigned: number;
   balanceAfter: number;
   referenceId: string | null;
@@ -332,7 +332,6 @@ export interface CarouselAsset {
 }
 
 export interface PlatformConfig {
-  sandboxMode: boolean;
   complianceApproved: boolean;
   adminSetupRequired: boolean;
   giftCodeEnabled: boolean;

@@ -21,7 +21,7 @@ import { AppShell } from '../components/AppShell';
 import { UserAvatar } from '../components/BrandMark';
 import { useAuth } from '../context/AuthContext';
 import {
-  formatDemoCredits,
+  formatEtb,
   getCustomerDisplayName,
   MAX_ACTIVE_PLANS,
   validateNickname,
@@ -137,19 +137,19 @@ export function MyAccountPage() {
             <div>
               <p className="text-[11px] text-white/80">Account Balance</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
-                {formatDemoCredits(summary?.demoBalance ?? 0)}
+                {formatEtb(summary?.availableBalance ?? 0)}
               </p>
             </div>
             <div>
               <p className="text-[11px] text-white/80">Total Rewards</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
-                {formatDemoCredits(summary?.demoTotalRewards ?? 0)}
+                {formatEtb(summary?.totalRewards ?? 0)}
               </p>
             </div>
             <div>
               <p className="text-[11px] text-white/80">Team Commission</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
-                {formatDemoCredits(summary?.demoTeamCommission ?? 0)}
+                {formatEtb(summary?.teamCommission ?? 0)}
               </p>
             </div>
           </div>
@@ -281,14 +281,14 @@ export function MyAccountPage() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Simulator &amp; Platform Rules</h3>
+              <h3 className="text-base font-bold text-slate-900">Wallet &amp; Platform Rules</h3>
               <button type="button" onClick={() => setRulesModal(false)} className="cursor-pointer">
                 <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
             <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
               <p><strong>Terms Version Accepted:</strong> {user?.termsAcceptedVersion || 'Pending'}</p>
-              <p><strong>Currency:</strong> Simulated ETB Only (no real cash value, not withdrawable)</p>
+              <p><strong>Currency:</strong> ETB wallet balance</p>
               <p><strong>Registration Bonus:</strong> {config?.settings.registrationBonus ?? 150} ETB</p>
               <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (manual claim once/day)</p>
               <p><strong>Active Plan Limit:</strong> Maximum {MAX_ACTIVE_PLANS} active plans (365-day manual daily claim)</p>

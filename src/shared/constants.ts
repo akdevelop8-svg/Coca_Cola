@@ -23,7 +23,7 @@ export const INVESTMENT_PLANS: InvestmentPlanDef[] = [
 ];
 
 export const DEFAULT_PLATFORM_SETTINGS = {
-  termsVersion: 'v1.0-sandbox',
+  termsVersion: 'v1.0',
   registrationBonus: 150,
   dailyCheckinAmount: 2,
   minWithdrawal: 150,

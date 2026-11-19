@@ -355,20 +355,8 @@ export function initDatabase(): void {
     `INSERT OR IGNORE INTO gift_code_settings (id, is_enabled, updated_by, updated_at) VALUES ('default', 0, NULL, ?)`
   ).run(now);
 
-  // Ensure existing customers have their 150 Demo ETB Registration Bonus idempotently
-  const customersWithoutBonus = db
-    .prepare(
-      `SELECT u.id, u.created_at FROM users u
-       WHERE u.role = 'customer'
-         AND NOT EXISTS (
-           SELECT 1 FROM demo_credit_transactions d
-           WHERE d.user_id = u.id AND d.idempotency_key = ('reg_bonus:' || u.id)
-         )`
-    )
-    .all() as Array<{ id: string; created_at: string }>;
-  for (const c of customersWithoutBonus) {
-    grantRegistrationDemoBonus(c.id, DEFAULT_PLATFORM_SETTINGS.registrationBonus, c.created_at || now);
-  }
+  // Registration credits are granted during an approved live registration.
+  // Never mint retroactive spendable credits for every account at server startup.
 
   // Seed default CBE deposit & CBE ONLY payout payment methods if empty
   const methodCount = (db.prepare('SELECT COUNT(*) as c FROM payment_methods').get() as { c: number }).c;
@@ -712,29 +700,16 @@ export function isGiftCodeFeatureEnabled(): boolean {
   return Boolean(row?.is_enabled);
 }
 
-export function getUserDemoWallet(userId: string) {
-  const row = db
-    .prepare(
-      `SELECT
-        COALESCE(SUM(amount_signed), 0) as demo_balance,
-        COALESCE(SUM(CASE WHEN type = 'daily_mining_claim' THEN amount_signed ELSE 0 END), 0) as demo_total_earnings,
-        COALESCE(SUM(CASE WHEN type IN ('registration_bonus', 'daily_checkin', 'gift_code', 'task_reward') THEN amount_signed ELSE 0 END), 0) as demo_total_rewards,
-        COALESCE(SUM(CASE WHEN type = 'referral_reward' THEN amount_signed ELSE 0 END), 0) as demo_team_commission
-       FROM demo_credit_transactions WHERE user_id = ?`
-    )
-    .get(userId) as {
-    demo_balance: number;
-    demo_total_earnings: number;
-    demo_total_rewards: number;
-    demo_team_commission: number;
-  };
-
+export function getUserWallet(userId: string) {
+  // Backward-compatible API names; all spendable amounts now come from the
+  // same audited wallet ledger used by manual deposits and withdrawals.
+  const balances = getUserBalances(userId);
   const round2 = (n: number) => Math.round((n || 0) * 100) / 100;
   return {
-    demoBalance: round2(row.demo_balance),
-    demoTotalEarnings: round2(row.demo_total_earnings),
-    demoTotalRewards: round2(row.demo_total_rewards),
-    demoTeamCommission: round2(row.demo_team_commission),
+    demoBalance: round2(balances.availableBalance),
+    demoTotalEarnings: round2(balances.totalEarnings),
+    demoTotalRewards: round2(balances.promotionalCredit + balances.totalRewards),
+    demoTeamCommission: round2(balances.teamCommission),
   };
 }
 
@@ -754,16 +729,26 @@ export function appendDemoTransaction(params: {
   idempotencyKey: string;
   createdAt?: string;
 }): number {
-  const current = getUserDemoWallet(params.userId).demoBalance;
-  const nextBalance = Math.round((current + params.amountSigned) * 100) / 100;
+  // Compatibility name for existing routes; posts an auditable live-ledger entry.
+  const amount = Math.round(params.amountSigned * 100) / 100;
+  const current = getUserBalances(params.userId).availableBalance;
+  const nextBalance = Math.round((current + amount) * 100) / 100;
+  const promoDelta = params.type === 'registration_bonus' ? amount : 0;
+  const earningsDelta = params.type === 'daily_mining_claim' ? amount : 0;
+  const rewardDelta = ['daily_checkin', 'gift_code', 'task_reward'].includes(params.type) ? amount : 0;
+  const commissionDelta = params.type === 'referral_reward' ? amount : 0;
   db.prepare(
-    `INSERT INTO demo_credit_transactions (id, user_id, type, amount_signed, balance_after, reference_id, note, idempotency_key, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    'INSERT INTO ledger_entries (id, user_id, type, amount_signed, promo_delta, earnings_delta, reward_delta, commission_delta, balance_after, status, reference_id, note, idempotency_key, created_at) ' +
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted', ?, ?, ?, ?)"
   ).run(
-    `dtx_${crypto.randomUUID()}`,
+    'ldg_' + crypto.randomUUID(),
     params.userId,
     params.type,
-    params.amountSigned,
+    amount,
+    promoDelta,
+    earningsDelta,
+    rewardDelta,
+    commissionDelta,
     nextBalance,
     params.referenceId ?? null,
     params.note,
@@ -780,16 +765,16 @@ export function grantRegistrationDemoBonus(
 ): void {
   const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : 150;
   const exists = db
-    .prepare('SELECT 1 FROM demo_credit_transactions WHERE idempotency_key = ?')
-    .get(`reg_bonus:${userId}`);
+    .prepare('SELECT 1 FROM ledger_entries WHERE idempotency_key = ?')
+    .get('reg_bonus:' + userId);
   if (exists) return;
   appendDemoTransaction({
     userId,
     type: 'registration_bonus',
     amountSigned: safeAmount,
     referenceId: userId,
-    note: `Registration bonus (+${safeAmount} ETB)`,
-    idempotencyKey: `reg_bonus:${userId}`,
+    note: 'Registration bonus (+' + safeAmount + ' ETB)',
+    idempotencyKey: 'reg_bonus:' + userId,
     createdAt,
   });
 }

@@ -42,7 +42,7 @@ function RequireAuth({
     return <Navigate to={`/login?redirect=${encodeURIComponent(currentFull)}`} replace />;
   }
 
-  const latestVersion = config?.settings.termsVersion || 'v1.0-sandbox';
+  const latestVersion = config?.settings.termsVersion || 'v1.0';
   if (requireTerms && user.termsAcceptedVersion !== latestVersion) {
     return <Navigate to={`/onboarding-terms?redirect=${encodeURIComponent(currentFull)}`} replace />;
   }
@@ -69,7 +69,7 @@ function PublicOnlyAuth({ children }: { children: React.ReactNode }) {
     }
     const params = new URLSearchParams(location.search);
     const redirect = params.get('redirect') || '/home';
-    const latestVersion = config?.settings.termsVersion || 'v1.0-sandbox';
+    const latestVersion = config?.settings.termsVersion || 'v1.0';
     if (user.termsAcceptedVersion !== latestVersion) {
       return <Navigate to={`/onboarding-terms?redirect=${encodeURIComponent(redirect)}`} replace />;
     }

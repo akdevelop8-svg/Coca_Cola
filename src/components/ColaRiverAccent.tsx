@@ -27,7 +27,7 @@ export function ColaRiverAccent() {
           <span className="font-semibold tracking-wide">Together for a Prosperous Future</span>
         </div>
         <span className="relative z-10 text-[11px] sm:text-xs text-white/85">
-          Sandbox Mode · Ethiopia
+          Ethiopia
         </span>
       </div>
     </div>

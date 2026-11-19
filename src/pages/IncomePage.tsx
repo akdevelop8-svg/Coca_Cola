@@ -4,8 +4,8 @@ import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { SUPPLIED_ASSETS } from '../shared/constants';
-import { formatDemoCredits, getCustomerDisplayName, MAX_ACTIVE_PLANS } from '../shared/finance';
-import type { DemoCreditTransaction } from '../types';
+import { formatEtb, getCustomerDisplayName, MAX_ACTIVE_PLANS } from '../shared/finance';
+import type { LedgerTransaction } from '../types';
 
 interface PurchasedPlanItem {
   id: string;
@@ -29,10 +29,10 @@ interface PurchasedPlanItem {
 interface IncomeResponse {
   activePlansCount: number;
   myIncome: number;
-  demoBalance: number;
+  availableBalance: number;
   todayEthiopiaDate: string;
   purchases: PurchasedPlanItem[];
-  demoTransactions: DemoCreditTransaction[];
+  transactions: LedgerTransaction[];
 }
 
 export function IncomePage() {
@@ -81,7 +81,7 @@ export function IncomePage() {
     }
   };
 
-  const filteredTx = (data?.demoTransactions || []).filter((tx) => {
+  const filteredTx = (data?.transactions || []).filter((tx) => {
     if (filter === 'all') return true;
     const d = new Date(tx.createdAt);
     const now = new Date();
@@ -91,7 +91,7 @@ export function IncomePage() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
-  const txTypeLabel = (type: DemoCreditTransaction['type']) => {
+  const txTypeLabel = (type: LedgerTransaction['type']) => {
     switch (type) {
       case 'registration_bonus':
         return 'Registration Bonus';
@@ -107,6 +107,14 @@ export function IncomePage() {
         return 'Referral Reward';
       case 'task_reward':
         return 'Team Task Reward';
+      case 'deposit_credit':
+        return 'Verified Deposit';
+      case 'withdrawal_reserve':
+        return 'Withdrawal Request';
+      case 'withdrawal_settle':
+        return 'Manual Bank Transfer Completed';
+      case 'withdrawal_release':
+        return 'Withdrawal Rejected — Funds Returned';
       default:
         return type;
     }
@@ -133,11 +141,11 @@ export function IncomePage() {
           </div>
         </div>
 
-        {/* Simulator Reminder */}
+        {/* Wallet Notice */}
         <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-center gap-2.5">
           <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
           <span>
-            <strong>Sandbox Simulator:</strong> All plan returns are simulated ETB (no cash value, not withdrawable).
+            <strong>Wallet notice:</strong> Rewards are credited to the wallet ledger after a successful claim. Deposits and withdrawals follow administrator verification and approval.
           </span>
         </div>
 
@@ -162,7 +170,7 @@ export function IncomePage() {
             <div>
               <p className="text-xs text-slate-500">Total Claimed Mining</p>
               <p data-testid="income-total-earnings" className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
-                {loading ? '...' : formatDemoCredits(data?.myIncome ?? 0)}
+                {loading ? '...' : formatEtb(data?.myIncome ?? 0)}
               </p>
             </div>
           </div>
@@ -173,8 +181,8 @@ export function IncomePage() {
             </div>
             <div>
               <p className="text-xs text-slate-500">Wallet Balance</p>
-              <p data-testid="income-demo-balance" className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
-                {loading ? '...' : formatDemoCredits(data?.demoBalance ?? 0)}
+              <p data-testid="income-wallet-balance" className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
+                {loading ? '...' : formatEtb(data?.availableBalance ?? 0)}
               </p>
             </div>
           </div>
@@ -251,13 +259,13 @@ export function IncomePage() {
                     <div>
                       <p className="text-slate-500">Original Investment</p>
                       <p className="font-bold text-slate-900 tabular-nums mt-0.5">
-                        {formatDemoCredits(p.amount)}
+                        {formatEtb(p.amount)}
                       </p>
                     </div>
                     <div>
                       <p className="text-slate-500">Daily Mining</p>
                       <p className="font-bold text-[#D71920] tabular-nums mt-0.5">
-                        {formatDemoCredits(p.dailyMiningRate)}
+                        {formatEtb(p.dailyMiningRate)}
                       </p>
                     </div>
                     <div>
@@ -281,7 +289,7 @@ export function IncomePage() {
                     <div className="text-xs">
                       <span className="text-slate-500">Total Claimed: </span>
                       <strong className="text-emerald-700 tabular-nums">
-                        {formatDemoCredits(p.totalClaimed)}
+                        {formatEtb(p.totalClaimed)}
                       </strong>
                     </div>
 
@@ -368,10 +376,10 @@ export function IncomePage() {
                           }`}
                         >
                           {isPositive ? '+' : '-'}
-                          {formatDemoCredits(Math.abs(tx.amountSigned))}
+                          {formatEtb(Math.abs(tx.amountSigned))}
                         </td>
                         <td className="px-4 py-3 text-right text-xs font-semibold text-slate-700 tabular-nums whitespace-nowrap">
-                          {formatDemoCredits(tx.balanceAfter)}
+                          {formatEtb(tx.balanceAfter)}
                         </td>
                       </tr>
                     );

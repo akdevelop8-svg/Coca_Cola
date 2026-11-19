@@ -3,16 +3,16 @@ import assert from 'node:assert/strict';
 import { INVESTMENT_PLANS, DEFAULT_PLATFORM_SETTINGS, DEFAULT_SUPPORT_CHANNELS, TEAM_VALUE_TASKS } from './constants';
 import {
   formatBr,
-  formatDemoCredits,
+  formatEtb,
   calculateWithdrawalBreakdown,
   isSafeRedirectPath,
   getEthiopiaCalendarDate,
   ethiopiaDateDiffDays,
   computePlanProgress,
   computeTeamTaskLevels,
-  canPurchaseDemoPlan,
+  canPurchasePlan,
   evaluateGiftCodeEligibility,
-  calculateReferralDemoRewards,
+  calculateReferralRewards,
   normalizeEthiopiaPhone,
   validateEthiopiaPhone,
   maskBankAccount,
@@ -44,13 +44,13 @@ test('CBE deposit and withdrawal settings match required configuration', () => {
   assert.equal(DEFAULT_SUPPORT_CHANNELS[1].href, 'https://t.me/Cocacolacampany');
 });
 
-test('formatBr and formatDemoCredits format amounts consistently in ETB', () => {
+test('formatBr and formatEtb format amounts consistently in ETB', () => {
   assert.equal(formatBr(600), 'Br 600');
   assert.equal(formatBr(1500), 'Br 1,500');
   assert.equal(formatBr(0, true), 'Br 0.00');
-  assert.equal(formatDemoCredits(600), '600 ETB');
-  assert.equal(formatDemoCredits(1500), '1,500 ETB');
-  assert.equal(formatDemoCredits(12.5), '12.50 ETB');
+  assert.equal(formatEtb(600), '600 ETB');
+  assert.equal(formatEtb(1500), '1,500 ETB');
+  assert.equal(formatEtb(12.5), '12.50 ETB');
 });
 
 test('calculateWithdrawalBreakdown enforces minimum 150, available balance, and 17% fee', () => {
@@ -68,15 +68,15 @@ test('calculateWithdrawalBreakdown enforces minimum 150, available balance, and 
   assert.match(overBalance.error || '', /Insufficient balance/i);
 });
 
-test('canPurchaseDemoPlan enforces max 2 active plans and sufficient ETB', () => {
-  assert.equal(canPurchaseDemoPlan(0, 600, 600).ok, true);
-  assert.equal(canPurchaseDemoPlan(1, 1500, 1500).ok, true);
+test('canPurchasePlan enforces max 2 active plans and sufficient ETB', () => {
+  assert.equal(canPurchasePlan(0, 600, 600).ok, true);
+  assert.equal(canPurchasePlan(1, 1500, 1500).ok, true);
 
-  const overLimit = canPurchaseDemoPlan(2, 5000, 600);
+  const overLimit = canPurchasePlan(2, 5000, 600);
   assert.equal(overLimit.ok, false);
   assert.match(overLimit.error || '', /maximum 2 active/i);
 
-  const lowBalance = canPurchaseDemoPlan(0, 150, 600);
+  const lowBalance = canPurchasePlan(0, 150, 600);
   assert.equal(lowBalance.ok, false);
   assert.match(lowBalance.error || '', /Insufficient ETB/i);
 });
@@ -125,8 +125,8 @@ test('evaluateGiftCodeEligibility enforces enabled, active, expiry, duplicate, a
   assert.equal(evaluateGiftCodeEligibility({ ...base, redemptionCount: 5 }).status, 400);
 });
 
-test('calculateReferralDemoRewards computes 20%, 2%, 1% ETB tiers', () => {
-  const rewards = calculateReferralDemoRewards(3000);
+test('calculateReferralRewards computes 20%, 2%, 1% ETB tiers', () => {
+  const rewards = calculateReferralRewards(3000);
   assert.deepEqual(rewards, { level1: 600, level2: 60, level3: 30 });
 });
 

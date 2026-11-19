@@ -26,7 +26,7 @@ import { AppShell } from '../components/AppShell';
 import { AuthenticatedImage } from '../components/AuthenticatedImage';
 import { CustomerDetailModal } from '../components/admin/CustomerDetailModal';
 import { useAuth } from '../context/AuthContext';
-import { formatBrExact, formatDemoCredits } from '../shared/finance';
+import { formatBrExact, formatEtb } from '../shared/finance';
 import type {
   BroadcastItem,
   DepositRequest,
@@ -241,7 +241,7 @@ export function AdminDashboardPage() {
         method: 'POST',
         body: JSON.stringify({}),
       });
-      setStatusMsg('Withdrawal approved. You may now mark it Processed or Completed after transfer.');
+      setStatusMsg('Withdrawal approved. Funds remain reserved until the manual bank transfer is recorded as completed.');
       await loadTab('withdrawals');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not approve withdrawal.');
@@ -251,6 +251,10 @@ export function AdminDashboardPage() {
   const handleConfirmWithdrawalComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completionModal) return;
+    if (!completionRef.trim()) {
+      setErrorMsg('Enter the actual bank transfer reference after making the manual bank transfer.');
+      return;
+    }
     setErrorMsg('');
     setStatusMsg('');
     try {
@@ -674,8 +678,7 @@ export function AdminDashboardPage() {
             <h2 className="text-xl font-bold">Protected Admin Control Center</h2>
             <p className="text-xs text-white/85 mt-0.5">
               Signed in as {user?.phone || user?.fullName} · Role:{' '}
-              <strong className="uppercase">{user?.role}</strong> · Sandbox:{' '}
-              {String(Boolean(config?.sandboxMode))}
+              <strong className="uppercase">{user?.role}</strong> · API
             </p>
           </div>
           {overview && tab === 'overview' && (
@@ -1923,7 +1926,7 @@ export function AdminDashboardPage() {
           </div>
         )}
 
-        {/* 8. GIFT CODE MANAGEMENT (SANDBOX ETB ONLY, ZERO CUSTOMER BALANCES EXPOSED) */}
+        {/* 8. GIFT CODE MANAGEMENT (WALLET REWARDS) */}
         {tab === 'gift_codes' && (
           <div className="space-y-5">
             {/* Global Feature Toggle Banner */}
@@ -2091,7 +2094,7 @@ export function AdminDashboardPage() {
                               </span>
                             </div>
                             <p className="text-slate-600">
-                              Reward: <strong>{formatDemoCredits(g.rewardAmount)}</strong> · Redemptions:{' '}
+                              Reward: <strong>{formatEtb(g.rewardAmount)}</strong> · Redemptions:{' '}
                               <strong className="tabular-nums">
                                 {g.redemptionCount}
                                 {g.maxRedemptions !== null ? ` / ${g.maxRedemptions}` : ' / Unlimited'}
@@ -2140,7 +2143,7 @@ export function AdminDashboardPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-emerald-700 tabular-nums">
-                          +{formatDemoCredits(r.rewardAmount)}
+                          +{formatEtb(r.rewardAmount)}
                         </span>
                         <span className="font-mono text-slate-400">
                           {new Date(r.redeemedAt).toLocaleString()}
@@ -2240,13 +2243,15 @@ export function AdminDashboardPage() {
               Mark Withdrawal as {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
             </h3>
             <p className="text-xs text-slate-600">
-              Optionally confirm or update the bank transfer reference before notifying the customer.
+              Make the bank transfer manually first, then enter the real bank reference. Funds remain reserved until you mark the transfer completed.
             </p>
             <input
               type="text"
               value={completionRef}
               onChange={(e) => setCompletionRef(e.target.value)}
-              placeholder="Bank Transfer Reference (optional)"
+              placeholder="Actual Bank Transfer Reference (required)"
+              required
+              autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
             />
             <div className="flex gap-3">
@@ -2259,7 +2264,8 @@ export function AdminDashboardPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2.5 rounded-full bg-emerald-700 text-white text-sm font-semibold cursor-pointer"
+                disabled={!completionRef.trim()}
+                className="flex-1 py-2.5 rounded-full bg-emerald-700 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
               </button>

@@ -118,14 +118,6 @@ export function WithdrawPage() {
   return (
     <AppShell title="Withdraw Funds">
       <div className="space-y-5">
-        {config?.sandboxMode && (
-          <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <p className="text-xs sm:text-sm text-amber-900">
-              <strong>Withdrawal Review Mode ({activePayoutNames}):</strong> Requests reserve your balance and are sent to the Admin Dashboard for verification and completion.
-            </p>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Withdrawal Form */}
