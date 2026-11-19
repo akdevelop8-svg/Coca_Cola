@@ -14,20 +14,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  const incomingUrl = req.url || "/api";
-  const suffix = incomingUrl.replace(/^\/api(?=\/|\?|$)/, "") || "/";
-  const target = edgeUrl.replace(/\/$/, "") + suffix;
+  const incoming = new URL(req.url || "/api/handler", "https://vercel.invalid");
+  const routePath = (incoming.searchParams.get("__api_path") || "")
+    .replace(/^\/+|\/+$/g, "");
+  incoming.searchParams.delete("__api_path");
+  const encodedPath = routePath
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const target = edgeUrl.replace(/\/$/, "")
+    + (encodedPath ? "/" + encodedPath : "")
+    + (incoming.searchParams.size ? "?" + incoming.searchParams.toString() : "");
+
   const headers = new Headers({
     apikey: apiKey,
     "x-client-info": "coca-cola-platform-vercel-gateway",
   });
-
   const auth = req.headers?.authorization;
   if (typeof auth === "string" && auth) headers.set("authorization", auth);
-
   const contentType = req.headers?.["content-type"];
   if (typeof contentType === "string") headers.set("content-type", contentType);
-
   const accept = req.headers?.accept;
   if (typeof accept === "string") headers.set("accept", accept);
 
@@ -48,7 +55,6 @@ export default async function handler(req, res) {
       upstream.headers.get("content-type") || "application/json; charset=utf-8",
     );
     res.setHeader("Cache-Control", "no-store");
-
     const location = upstream.headers.get("location");
     if (location) res.setHeader("Location", location);
     res.end(bytes);
