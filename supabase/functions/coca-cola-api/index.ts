@@ -307,8 +307,8 @@ async function walletSummary(userId: string) {
     ...balances,
     activePlansCount: (purchases || []).length,
     maxActivePlans: 2,
-    teamMembersCount: team.teamMembersCount,
-    qualifyingTeamMembersCount: team.qualifyingTeamMembersCount,
+    teamMembersCount: team.summary.totalRegisteredMembers,
+    qualifyingTeamMembersCount: team.summary.qualifyingMembersCount,
     checkedInToday: !!checkin.data,
     todayEthiopiaDate: ethiopiaDate(),
   };
@@ -655,7 +655,7 @@ async function route(request: Request): Promise<Response> {
       checked<any[]>(db.from("ledger_entries").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100)),
     ]);
     const claims = purchases.length
-      ? await checked<any[]>(db.from("daily_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100))
+      ? await checked<any[]>(db.from("daily_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1000))
       : [];
     const today = ethiopiaDate();
     const dayMs = (value: string) => Date.parse(value + "T00:00:00.000Z");
