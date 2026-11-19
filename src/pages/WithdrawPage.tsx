@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, CreditCard, Landmark, ShieldAlert } from 'lucide-react';
 import { apiFetch } from '../api/client';
@@ -20,6 +20,7 @@ export function WithdrawPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const withdrawalIdempotencyKey = useRef<string | null>(null);
 
   const settings = config?.settings;
   const minWithdrawal = settings?.minWithdrawal ?? 150;
@@ -85,12 +86,18 @@ export function WithdrawPage() {
     setSubmitting(true);
     setError('');
     try {
+      // Reuse the same key for retries until the requested amount changes or succeeds.
+      withdrawalIdempotencyKey.current ||= crypto.randomUUID();
       const res = await apiFetch<{ message: string }>('/api/withdrawals', {
         method: 'POST',
-        body: JSON.stringify({ amount: breakdown.grossAmount }),
+        body: JSON.stringify({
+          amount: breakdown.grossAmount,
+          idempotencyKey: withdrawalIdempotencyKey.current,
+        }),
       });
       setConfirmOpen(false);
       setSuccess(res.message);
+      withdrawalIdempotencyKey.current = null;
       setAmount('');
       await loadData();
     } catch (err: any) {
@@ -203,7 +210,7 @@ export function WithdrawPage() {
                   min={minWithdrawal}
                   step="0.01"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => { withdrawalIdempotencyKey.current = null; setAmount(e.target.value); }}
                   placeholder={`Enter amount (min ${minWithdrawal})`}
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
                   required

@@ -97,6 +97,8 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("GIFT_CODE_ALREADY_REDEEMED")) throw new ApiError("You have already redeemed this gift code.", 409);
     if (message.includes("GIFT_CODE_EXPIRED")) throw new ApiError("This gift code has expired.", 400);
     if (message.includes("GIFT_CODES_DISABLED")) throw new ApiError("Gift codes are currently disabled.", 503);
+    if (message.includes("ACCOUNT_ALREADY_EXISTS")) throw new ApiError("An account with this phone number already exists.", 409);
+    if (message.includes("INVALID_REFERRAL_CODE")) throw new ApiError("Invitation code is invalid or does not exist.", 400);
     if (message.includes("ACTIVE_PLAN_LIMIT_REACHED")) throw new ApiError("You already have the maximum number of active plans.", 400);
     if (message.includes("PLAN_NOT_CLAIMABLE")) throw new ApiError("This plan is not available for a daily claim.", 400);
     if (message.includes("TASK_TARGET_NOT_REACHED")) throw new ApiError("The team deposit target for this task has not been reached yet.", 400);
@@ -486,37 +488,23 @@ async function route(request: Request): Promise<Response> {
     if (reservedAdminPhone && phone === normalizePhone(reservedAdminPhone)) {
       throw new ApiError("This phone number is reserved and cannot be registered.", 409);
     }
-    const existing = await db.from("users").select("id").eq("phone", phone).maybeSingle();
-    if (existing.error) throw new ApiError("Unable to validate phone number.", 503);
-    if (existing.data) throw new ApiError("An account with this phone number already exists.", 409);
-    let invitedBy: string | null = null;
-    const referralCode = String(body.referralCode || "").trim().toUpperCase();
-    if (referralCode) {
-      const inviter = await db.from("users").select("id").eq("referral_code", referralCode).maybeSingle();
-      if (inviter.error || !inviter.data) throw new ApiError("Invitation code is invalid or does not exist.", 400);
-      invitedBy = inviter.data.id;
-    }
+    const referralCode = String(body.referralCode || "").trim().toUpperCase() || null;
     const userId = uuid("usr_");
-    const newCode = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
     const fullName = String(body.fullName || body.name || "Customer").trim().slice(0, 100);
-    const inserted = await db.from("users").insert({
-      id: userId, full_name: fullName, phone, email: body.email || null,
-      password_hash: await bcrypt.hash(password, 12), role: "customer", status: "active",
-      referral_code: newCode, invited_by_user_id: invitedBy,
-      created_at: nowIso(), last_active_at: nowIso(),
-    }).select("*").single();
-    if (inserted.error) throw new ApiError(inserted.error.message || "Unable to create account.", 400);
-    const app = await getAppSettings();
-    if (app.financialOperationsEnabled && Number(app.settings.registrationBonus) > 0) {
-      await checked(db.rpc("wallet_post_entry", {
-        p_user_id: userId, p_type: "registration_bonus", p_amount_signed: Number(app.settings.registrationBonus),
-        p_reserved_delta: 0, p_promo_delta: Number(app.settings.registrationBonus),
-        p_earnings_delta: 0, p_reward_delta: 0, p_commission_delta: 0,
-        p_reference_id: userId, p_note: "Registration reward", p_idempotency_key: "registration-bonus:" + userId,
-      }));
-    }
-    const token = await createSession(userId);
-    const user = await profileFor(inserted.data);
+    const passwordHash = await bcrypt.hash(password, 12);
+    const registeredUserId = await checked<string>(db.rpc("register_customer_atomic", {
+      p_user_id: userId,
+      p_full_name: fullName,
+      p_phone: phone,
+      p_email: body.email ? String(body.email).trim().toLowerCase() : null,
+      p_password_hash: passwordHash,
+      p_referral_code: referralCode,
+    }), 400);
+    const token = await createSession(registeredUserId);
+    const insertedUser = await checked<any>(
+      db.from("users").select("*").eq("id", registeredUserId).single(),
+    );
+    const user = await profileFor(insertedUser);
     return json({ user, token, unreadNotifications: 0 }, 201);
   }
 
