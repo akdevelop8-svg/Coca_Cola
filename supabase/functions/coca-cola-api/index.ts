@@ -440,8 +440,7 @@ async function route(request: Request): Promise<Response> {
     );
     await checked(db.from("sessions").delete().eq("user_id", owner.id));
     await checked(db.from("app_settings").delete().eq("key", "owner_password_reset_sha256"));
-    const token = await createSession(owner.id);
-    return json({ success: true, token, user: await profileFor(updated), message: "Owner password reset successfully." });
+    return json({ success: true, user: await profileFor(updated), message: "Owner password reset successfully. Please sign in with your new password." });
   }
 
   if (p === "auth/bootstrap-owner" && method === "POST") {
