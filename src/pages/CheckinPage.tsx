@@ -146,13 +146,13 @@ export function CheckinPage() {
           </div>
           {loading ? (
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
-          ) : !data?.history.length ? (
+          ) : !(data?.history || []).length ? (
             <p className="p-8 text-center text-sm text-slate-500">
               No daily check-ins claimed yet. Press CLAIM above to claim today&apos;s {data?.rewardAmount ?? 2} ETB.
             </p>
           ) : (
             <div className="divide-y divide-slate-100">
-              {data.history.map((item) => (
+              {(data.history || []).map((item) => (
                 <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs sm:text-sm">
                   <div>
                     <p className="font-mono font-semibold text-slate-900">{item.ethiopiaDate}</p>

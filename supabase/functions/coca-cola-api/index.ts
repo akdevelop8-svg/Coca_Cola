@@ -307,8 +307,8 @@ async function walletSummary(userId: string) {
     ...balances,
     activePlansCount: (purchases || []).length,
     maxActivePlans: 2,
-    teamMembersCount: team.teamMembersCount,
-    qualifyingTeamMembersCount: team.qualifyingTeamMembersCount,
+    teamMembersCount: team.summary.totalRegisteredMembers,
+    qualifyingTeamMembersCount: team.summary.qualifyingMembersCount,
     checkedInToday: !!checkin.data,
     todayEthiopiaDate: ethiopiaDate(),
   };
@@ -324,6 +324,11 @@ const payoutDto = (a: any) => a ? ({
   status: a.status, isLocked: a.is_locked === 1, reviewNote: a.review_note,
   updatedAt: a.updated_at,
 }) : null;
+const payoutChangeRequestDto = (r: any) => ({
+  id: r.id, userId: r.user_id, reason: r.reason, newMethodName: r.new_method_name,
+  newAccountNumber: r.new_account_number, newAccountOwnerName: r.new_account_owner_name,
+  status: r.status, adminNote: r.admin_note ?? null, createdAt: r.created_at,
+});
 const depositDto = (d: any) => ({
   id: d.id, userId: d.user_id, paymentMethodId: d.payment_method_id,
   methodName: d.method_name, accountNumberSnapshot: d.account_number_snapshot,
@@ -606,10 +611,24 @@ async function route(request: Request): Promise<Response> {
   if (p === "dashboard/summary" && method === "GET") return json(await walletSummary(user.id));
 
   if (p === "checkin" && method === "GET") {
-    const [app, wallet] = await Promise.all([getAppSettings(), walletSummary(user.id)]);
+    const [app, wallet, history] = await Promise.all([
+      getAppSettings(),
+      walletSummary(user.id),
+      checked<any[]>(db.from("daily_checkins").select("id,ethiopia_date,amount,status,created_at")
+        .eq("user_id", user.id).order("ethiopia_date", { ascending: false }).limit(30)),
+    ]);
+    const rewardAmount = Number(app.settings.dailyCheckinAmount);
     return json({
-      checkedInToday: wallet.checkedInToday, todayEthiopiaDate: wallet.todayEthiopiaDate,
-      amount: Number(app.settings.dailyCheckinAmount), availableBalance: wallet.availableBalance,
+      checkedInToday: wallet.checkedInToday,
+      ethiopiaDate: wallet.todayEthiopiaDate,
+      todayEthiopiaDate: wallet.todayEthiopiaDate,
+      rewardAmount,
+      amount: rewardAmount,
+      availableBalance: wallet.availableBalance,
+      history: history.map((x: any) => ({
+        id: x.id, ethiopiaDate: x.ethiopia_date, amount: Number(x.amount),
+        status: x.status, createdAt: x.created_at,
+      })),
     });
   }
   if (p === "checkin" && method === "POST") {
@@ -636,7 +655,7 @@ async function route(request: Request): Promise<Response> {
       checked<any[]>(db.from("ledger_entries").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100)),
     ]);
     const claims = purchases.length
-      ? await checked<any[]>(db.from("daily_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100))
+      ? await checked<any[]>(db.from("daily_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1000))
       : [];
     const today = ethiopiaDate();
     const dayMs = (value: string) => Date.parse(value + "T00:00:00.000Z");
@@ -664,6 +683,7 @@ async function route(request: Request): Promise<Response> {
       };
     });
     return json({
+      ...wallet,
       activePlansCount: purchaseItems.filter((x: any) => !x.isCompleted && x.status === "active").length,
       myIncome: Number(wallet.totalEarnings || 0),
       availableBalance: Number(wallet.availableBalance || 0),
@@ -695,8 +715,15 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "payment-methods" && method === "GET") {
-    const methods = await checked<any[]>(db.from("payment_methods").select("*").eq("kind", "deposit").eq("is_active", 1).order("sort_order"));
-    return json({ depositMethods: methods.map(paymentMethodDto), methods: methods.map(paymentMethodDto) });
+    const [depositMethods, payoutMethods] = await Promise.all([
+      checked<any[]>(db.from("payment_methods").select("*").eq("kind", "deposit").eq("is_active", 1).order("sort_order")),
+      checked<any[]>(db.from("payment_methods").select("*").eq("kind", "payout").eq("is_active", 1).order("sort_order")),
+    ]);
+    return json({
+      depositMethods: depositMethods.map(paymentMethodDto),
+      payoutMethods: payoutMethods.map(paymentMethodDto),
+      methods: depositMethods.map(paymentMethodDto),
+    });
   }
 
   if (p === "deposits" && method === "GET") {
@@ -730,33 +757,46 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "payout-account" && method === "GET") {
-    const account = await checked<any>(db.from("payout_accounts").select("*").eq("user_id", user.id).maybeSingle());
-    return json({ account: payoutDto(account) });
+    const [account, changeRequests] = await Promise.all([
+      checked<any>(db.from("payout_accounts").select("*").eq("user_id", user.id).maybeSingle()),
+      checked<any[]>(db.from("payout_change_requests").select("*").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(100)),
+    ]);
+    return json({
+      account: payoutDto(account),
+      changeRequests: changeRequests.map(payoutChangeRequestDto),
+    });
   }
   if (p === "payout-account" && method === "POST") {
-    const methodName = String(body.methodName || body.bankName || "").trim();
+    const methodId = String(body.methodId || "").trim();
     const accountNumber = String(body.accountNumber || "").trim();
     const ownerName = String(body.accountOwnerName || body.accountName || "").trim();
-    if (!methodName || accountNumber.length < 5 || !ownerName) throw new ApiError("Enter the bank name, account number, and account owner.", 400);
+    if (!methodId || accountNumber.length < 5 || !ownerName) throw new ApiError("Select a payout method and enter the account number and account owner.", 400);
+    const selectedMethod = await checked<any>(db.from("payment_methods").select("name")
+      .eq("id", methodId).eq("kind", "payout").eq("is_active", 1).maybeSingle());
+    if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
     const existing = await checked<any>(db.from("payout_accounts").select("id,status").eq("user_id", user.id).maybeSingle());
     if (existing) throw new ApiError("An account is already on file. Use the change request process.", 409);
     const row = await checked<any>(db.from("payout_accounts").insert({
-      id: uuid("pay_"), user_id: user.id, method_name: methodName, account_number: accountNumber,
+      id: uuid("pay_"), user_id: user.id, method_name: selectedMethod.name, account_number: accountNumber,
       account_owner_name: ownerName, status: "pending", is_locked: 1, updated_at: nowIso(),
     }).select("*").single());
     return json({ message: "Bank account submitted for administrator approval.", account: payoutDto(row) }, 201);
   }
   if (p === "payout-account/change-request" && method === "POST") {
     const reason = String(body.reason || "").trim();
-    const newMethod = String(body.methodName || body.newMethodName || "").trim();
-    const number = String(body.accountNumber || body.newAccountNumber || "").trim();
-    const ownerName = String(body.accountOwnerName || body.newAccountOwnerName || "").trim();
-    if (!reason || !newMethod || number.length < 5 || !ownerName) throw new ApiError("Complete all bank account change details.", 400);
+    const newMethodId = String(body.newMethodId || "").trim();
+    const number = String(body.newAccountNumber || "").trim();
+    const ownerName = String(body.newAccountOwnerName || "").trim();
+    if (!reason || !newMethodId || number.length < 5 || !ownerName) throw new ApiError("Select a payout method and complete all bank account change details.", 400);
+    const selectedMethod = await checked<any>(db.from("payment_methods").select("name")
+      .eq("id", newMethodId).eq("kind", "payout").eq("is_active", 1).maybeSingle());
+    if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
     const row = await checked<any>(db.from("payout_change_requests").insert({
-      id: uuid("pcr_"), user_id: user.id, reason, new_method_name: newMethod,
+      id: uuid("pcr_"), user_id: user.id, reason, new_method_name: selectedMethod.name,
       new_account_number: number, new_account_owner_name: ownerName, status: "pending", created_at: nowIso(),
     }).select("*").single());
-    return json({ message: "Bank account change request submitted.", request: row }, 201);
+    return json({ message: "Bank account change request submitted.", request: payoutChangeRequestDto(row) }, 201);
   }
 
   if (p === "withdrawals" && method === "GET") {
