@@ -84,9 +84,19 @@ export async function apiFetch<T = any>(
 
   if (url.startsWith('/api/auth/logout')) {
     setFallbackSessionToken(null);
-  } else if (res.ok && data && typeof data.sessionToken === 'string' && data.sessionToken) {
-    setFallbackSessionToken(data.sessionToken);
-  } else if (res.status === 401) {
+  } else if (res.ok && data) {
+    // The API returns the login/register session as "token"; also support the
+    // older "sessionToken" field so protected follow-up requests keep auth.
+    const sessionToken =
+      typeof data.sessionToken === 'string' && data.sessionToken
+        ? data.sessionToken
+        : typeof data.token === 'string' && data.token
+          ? data.token
+          : null;
+    if (sessionToken) setFallbackSessionToken(sessionToken);
+  }
+
+  if (res.status === 401) {
     setFallbackSessionToken(null);
   }
 
