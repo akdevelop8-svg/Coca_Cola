@@ -26,9 +26,11 @@ The function is configured with `verify_jwt = false` because the application val
 
 ## Financial safety
 
-The database setting `financial_operations_enabled` is deliberately `false` by default. Balance-changing operations (plan purchases, daily claims, task/check-in rewards, gift-code redemption, deposits, withdrawals, and administrator deposit/withdrawal settlement) are blocked server-side while it remains false.
+The database setting `financial_operations_enabled` is deliberately `false` by default. It gates plan purchases, income claims, task rewards, gift-code redemption, deposits, withdrawals, and administrator deposit/withdrawal settlement.
 
-Do not enable financial operations until sponsorship/funding, legal authorization, customer disclosures, and actual bank transfer procedures have been independently verified. Deposit requests are not wallet credits until an authorized administrator approves them. Withdrawals require manual review and a bank transfer reference.
+Registration and daily check-in wallet credits use a separate `promotional_rewards_enabled` setting, which is also `false` by default. When enabled, the 150 ETB registration bonus and 2 ETB daily check-in are real wallet ledger credits, not demo points, and therefore create funding liabilities even while deposits and withdrawals remain disabled. Do not enable promotional rewards until the reward budget and customer-facing terms are approved and funded.
+
+Do not enable live financial operations until funding, legal authorization, customer disclosures, and actual bank transfer procedures have been independently verified. Deposit requests are not wallet credits until an authorized administrator approves them. Withdrawals require manual review and a bank transfer reference.
 
 Current configured withdrawal rules: minimum ETB 150 and 17% fee. Plan terms and reward values are maintained in the shared application constants and Edge Function logic; keep those values synchronized when they are changed.
 
