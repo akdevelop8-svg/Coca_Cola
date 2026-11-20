@@ -1737,6 +1737,23 @@ export function AdminDashboardPage() {
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
                       />
                     </div>
+                    <div className="col-span-2">
+                      <label htmlFor="set-privacy-policy" className="block text-xs font-semibold text-slate-600 mb-1">
+                        Public Privacy Policy URL (HTTPS)
+                      </label>
+                      <input
+                        id="set-privacy-policy"
+                        type="url"
+                        inputMode="url"
+                        value={settingsForm.privacyPolicyUrl || ''}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, privacyPolicyUrl: e.target.value.trim() })}
+                        placeholder="https://your-company.example/privacy-policy"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                      />
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                        Add the public link to your already approved company Privacy Policy. It will appear on login, registration, and signed-in pages. Only HTTPS links are accepted.
+                      </p>
+                    </div>
                     <label className="col-span-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
                       <input
                         type="checkbox"
