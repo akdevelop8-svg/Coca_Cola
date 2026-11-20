@@ -293,6 +293,7 @@ export function AdminDashboardPage() {
         });
         setStatusMsg('Withdrawal rejected and reserved balance released.');
         await loadTab('withdrawals');
+      }
       setRejectModal(null);
       setRejectReason('');
     } catch (err: any) {
