@@ -684,6 +684,7 @@ async function route(request: Request): Promise<Response> {
       throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     }
     const result = await checked<any>(db.rpc("claim_daily_checkin_atomic", { p_user_id: user.id }));
+    await notifyCustomer(user.id, "Daily check-in credited", "Your daily check-in reward was successfully credited to your wallet.", "daily_checkin", "/checkin");
     return json({ message: "Daily check-in reward claimed.", ...result, availableBalance: (await getBalances(user.id)).availableBalance });
   }
 
@@ -696,6 +697,7 @@ async function route(request: Request): Promise<Response> {
       p_user_id: user.id, p_plan_code: plan.code, p_amount: plan.investment,
       p_daily_rate: plan.dailyMining, p_idempotency_key: idempotencyKey,
     }));
+    await notifyCustomer(user.id, "Plan activated", `Plan ${plan.code} was successfully activated. Your plan details are available in the Income section.`, "plan_purchase", "/income");
     return json({ message: "Plan purchase completed.", purchase: result, ...result });
   }
 
@@ -752,6 +754,7 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("claim_daily_mining_atomic", {
       p_user_id: user.id, p_purchase_id: decodeURIComponent(incomeClaim[1]), p_ethiopia_date: ethiopiaDate(),
     }));
+    await notifyCustomer(user.id, "Daily earnings credited", `Your daily mining earnings of ${Number(result.amount || 0).toFixed(2)} ETB were credited to your wallet.`, "daily_mining", "/income");
     return json({ message: "Daily mining reward claimed.", ...result, ...await getBalances(user.id) });
   }
 
@@ -762,6 +765,7 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("claim_team_value_task_atomic", {
       p_user_id: user.id, p_task_id: String(body.taskId || ""),
     }));
+    await notifyCustomer(user.id, "Team task reward credited", `Your team task reward of ${Number(result.amount || result.rewardAmount || 0).toFixed(2)} ETB was credited to your wallet.`, "task_reward", "/task");
     return json({ message: "Team task reward claimed.", ...result, ...await teamTaskSummary(user.id) });
   }
 
@@ -1006,12 +1010,13 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("redeem_gift_code_atomic", {
       p_user_id: user.id, p_code: String(body.code || "").trim(),
     }));
+    await notifyCustomer(user.id, "Gift code redeemed", `Your gift code reward of ${Number(result.rewardAmount || result.reward_amount || 0).toFixed(2)} ETB was credited to your wallet.`, "gift_code", "/gift-codes");
     return json({ message: "Gift code redeemed successfully.", ...result });
   }
 
   if (p.startsWith("admin/")) {
     let allowed = ["owner_admin", "super_admin"];
-    if (/^admin\/(overview|deposits|withdrawals|payout-accounts|payout-change-requests|payment-methods|gift-codes)/.test(p)) {
+    if (/^admin\/(overview|deposits|withdrawals|payment-methods|gift-codes)/.test(p)) {
       allowed = ["owner_admin", "finance_admin", "admin", "super_admin"];
     } else if (p.startsWith("admin/tickets")) {
       allowed = ["owner_admin", "support_admin", "admin", "super_admin"];
@@ -1193,62 +1198,6 @@ async function route(request: Request): Promise<Response> {
     }
     return json({ success: true, ...result });
   }
-  if (p === "admin/payout-accounts" && method === "GET") {
-    const [rows, changes, users] = await Promise.all([
-      checked<any[]>(db.from("payout_accounts").select("*").order("updated_at", { ascending: false })),
-      checked<any[]>(db.from("payout_change_requests").select("*").order("created_at", { ascending: false }).limit(300)),
-      checked<any[]>(db.from("users").select("id,full_name,nickname,phone")),
-    ]);
-    const byId = new Map(users.map((u: any) => [u.id, u]));
-    return json({
-      accounts: rows.map((a: any) => ({
-        ...payoutDto(a),
-        customerName: byId.get(a.user_id)?.nickname || byId.get(a.user_id)?.full_name || "Customer",
-        customerPhone: byId.get(a.user_id)?.phone || "",
-      })),
-      changeRequests: changes.map((r: any) => ({
-        id:r.id,userId:r.user_id,customerName:byId.get(r.user_id)?.nickname || byId.get(r.user_id)?.full_name || "Customer",
-        customerPhone:byId.get(r.user_id)?.phone || "",reason:r.reason,newMethodName:r.new_method_name,
-        newAccountNumber:r.new_account_number,newAccountOwnerName:r.new_account_owner_name,
-        status:r.status,adminNote:r.admin_note,createdAt:r.created_at,
-      })),
-    });
-  }
-
-  const payoutReview = p.match(/^admin\/payout-accounts\/([^/]+)\/review$/);
-  if (payoutReview && method === "POST") {
-    const id = decodeURIComponent(payoutReview[1]);
-    const status = String(body.status || "");
-    if (!["approved","rejected"].includes(status)) throw new ApiError("Invalid review status.", 400);
-    await checked(db.from("payout_accounts").update({
-      status, is_locked: status === "approved" ? 0 : 1,
-      review_note: String(body.note || body.reason || ""), reviewed_by: user.id, reviewed_at: nowIso(), updated_at: nowIso(),
-    }).eq("id", id));
-    return json({ success: true });
-  }
-  if (p === "admin/payout-change-requests" && method === "GET") {
-    const rows = await checked<any[]>(db.from("payout_change_requests").select("*").order("created_at", { ascending: false }).limit(300));
-    return json({ changeRequests: rows });
-  }
-  const changeReview = p.match(/^admin\/payout-change-requests\/([^/]+)\/review$/);
-  if (changeReview && method === "POST") {
-    const id = decodeURIComponent(changeReview[1]);
-    const item = await checked<any>(db.from("payout_change_requests").select("*").eq("id", id).maybeSingle());
-    if (!item) throw new ApiError("Change request not found.", 404);
-    const status = String(body.status || "");
-    if (!["approved","rejected"].includes(status)) throw new ApiError("Invalid review status.", 400);
-    if (status === "approved") {
-      await checked(db.from("payout_accounts").update({
-        method_name:item.new_method_name, account_number:item.new_account_number,
-        account_owner_name:item.new_account_owner_name, status:"approved", is_locked:0,
-        reviewed_by:user.id, reviewed_at:nowIso(), updated_at:nowIso(),
-      }).eq("user_id", item.user_id));
-    }
-    await checked(db.from("payout_change_requests").update({
-      status, admin_note:String(body.note || body.reason || ""), reviewed_by:user.id, reviewed_at:nowIso(),
-    }).eq("id", id));
-    return json({ success:true });
-  }
   if (p === "admin/tickets" && method === "GET") {
     const tickets = await checked<any[]>(db.from("support_tickets").select("*").order("updated_at", { ascending: false }).limit(300));
     const ids = tickets.map((x: any) => x.id);
@@ -1294,7 +1243,11 @@ async function route(request: Request): Promise<Response> {
   if (adminTicketStatus && method === "POST") {
     const status=String(body.status||"");
     if (!["open","in_progress","resolved","closed"].includes(status)) throw new ApiError("Invalid ticket status.",400);
-    await checked(db.from("support_tickets").update({status,updated_at:nowIso(),...(body.isRead!==undefined ? {is_read_by_admin:body.isRead?1:0} : {})}).eq("id",decodeURIComponent(adminTicketStatus[1])));
+    const ticketId=decodeURIComponent(adminTicketStatus[1]);
+    const ticket=await checked<any>(db.from("support_tickets").select("user_id,subject").eq("id",ticketId).maybeSingle());
+    if (!ticket) throw new ApiError("Support ticket not found.",404);
+    await checked(db.from("support_tickets").update({status,updated_at:nowIso(),...(body.isRead!==undefined ? {is_read_by_admin:body.isRead?1:0} : {})}).eq("id",ticketId));
+    await notifyCustomer(ticket.user_id, "Support request updated", `Your support request “${ticket.subject}” is now ${status.replace("_"," ")}.`, "support_status", "/service");
     return json({success:true});
   }
   if (p === "admin/gift-codes" && method === "GET") {
