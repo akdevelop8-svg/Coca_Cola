@@ -122,6 +122,8 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
     if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
+    if (message.includes("MAKER_CHECKER_REQUIRED")) throw new ApiError("A different authorized administrator than the approver must confirm the bank transfer.", 403);
+    if (message.includes("WITHDRAWAL_REVIEWER_REQUIRED")) throw new ApiError("This withdrawal must be approved before completion.", 409);
     if (message.includes("INSUFFICIENT_AVAILABLE_BALANCE")) throw new ApiError("Your available wallet balance is insufficient.", 400);
     if (message.includes("PAYOUT_ACCOUNT_NOT_APPROVED")) throw new ApiError("Your bank account must be approved before withdrawing.", 400);
     if (message.includes("MINIMUM_WITHDRAWAL_IS_150_ETB")) throw new ApiError("Minimum withdrawal is 150 ETB.", 400);
@@ -1200,12 +1202,14 @@ async function route(request: Request): Promise<Response> {
   if (adminWithdrawal && method === "POST") {
     const withdrawalId = decodeURIComponent(adminWithdrawal[1]);
     const action = adminWithdrawal[2];
-    const withdrawal = await checked<any>(db.from("withdrawals").select("user_id,gross_amount,fee_amount,net_amount").eq("id", withdrawalId).maybeSingle());
+    const withdrawal = await checked<any>(db.from("withdrawals").select("user_id,gross_amount,fee_amount,net_amount,reviewed_by").eq("id", withdrawalId).maybeSingle());
     if (!withdrawal) throw new ApiError("Withdrawal request not found.", 404);
     const reason = String(body.reason || "").trim();
     const bankReference = String(body.providerReference || body.bankTransferReference || body.reference || "").trim();
     let result: any;
     if (action === "complete") {
+      if (!withdrawal.reviewed_by) throw new ApiError("This withdrawal must be approved before completion.", 409);
+      if (withdrawal.reviewed_by === user.id) throw new ApiError("A different authorized administrator than the approver must confirm the bank transfer.", 403);
       result = await checked<any>(db.rpc("complete_withdrawal_atomic", {
         p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
         p_bank_transfer_reference: bankReference,
