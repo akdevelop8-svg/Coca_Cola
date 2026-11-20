@@ -262,6 +262,18 @@ export function AppShell({
         <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-24 lg:pb-10">
           {children}
           <ColaRiverAccent />
+          {config?.settings?.privacyPolicyUrl && (
+            <footer className="mt-6 border-t border-slate-200 pt-4 pb-2 text-center text-xs text-slate-500">
+              <a
+                href={config.settings.privacyPolicyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#B80D13] hover:underline"
+              >
+                Privacy Policy
+              </a>
+            </footer>
+          )}
         </main>
       </div>
 
