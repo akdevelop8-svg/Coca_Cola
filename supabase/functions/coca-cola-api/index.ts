@@ -125,7 +125,10 @@ async function getAppSettings() {
   const financialOperationsEnabled = ["true", "1", "yes", "enabled"].includes(
     String(values.financial_operations_enabled || "false").toLowerCase(),
   );
-  return { settings: parsed, values, financialOperationsEnabled };
+  const promotionalRewardsEnabled = ["true", "1", "yes", "enabled"].includes(
+    String(values.promotional_rewards_enabled || "false").toLowerCase(),
+  );
+  return { settings: parsed, values, financialOperationsEnabled, promotionalRewardsEnabled };
 }
 async function profileFor(user: any) {
   const [termsResult, inviterResult] = await Promise.all([
@@ -548,7 +551,7 @@ async function route(request: Request): Promise<Response> {
   const requiresFinancialApproval =
     method === "POST" &&
     (
-      ["checkin", "plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
+      ["plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
       /^income\/claim\/[^/]+$/.test(p) ||
       /^admin\/deposits\/[^/]+\/(approve|reject)$/.test(p) ||
       /^admin\/withdrawals\/[^/]+\/(approve|reject|complete)$/.test(p)
@@ -620,6 +623,10 @@ async function route(request: Request): Promise<Response> {
     });
   }
   if (p === "checkin" && method === "POST") {
+    const rewardSettings = await getAppSettings();
+    if (!rewardSettings.promotionalRewardsEnabled) {
+      throw new ApiError("Promotional rewards are temporarily disabled.", 503);
+    }
     const result = await checked<any>(db.rpc("claim_daily_checkin_atomic", { p_user_id: user.id }));
     return json({ message: "Daily check-in reward claimed.", ...result, availableBalance: (await getBalances(user.id)).availableBalance });
   }
@@ -1233,12 +1240,15 @@ async function route(request: Request): Promise<Response> {
 
   if(p==="admin/settings" && method==="GET"){
     const app=await getAppSettings();
-    return json({settings:app.settings,financialOperationsEnabled:app.financialOperationsEnabled});
+    return json({settings:app.settings,financialOperationsEnabled:app.financialOperationsEnabled,promotionalRewardsEnabled:app.promotionalRewardsEnabled});
   }
   if(p==="admin/settings" && ["POST","PUT","PATCH"].includes(method)){
     const changes=body.settings||body;
-    const allowed=new Set(Object.keys(defaultSettings).concat(["financial_operations_enabled"]));
-    const rows=Object.entries(changes).filter(([k,v])=>allowed.has(k)&&v!==undefined).map(([key,value])=>({
+    const allowed=new Set(Object.keys(defaultSettings).concat(["financial_operations_enabled","promotional_rewards_enabled"]));
+    const normalizedChanges=Object.entries(changes).map(([key,value])=>[
+      key==="promotionalRewardsEnabled" ? "promotional_rewards_enabled" : key, value,
+    ]);
+    const rows=normalizedChanges.filter(([k,v])=>allowed.has(String(k))&&v!==undefined).map(([key,value])=>({
       key,value:String(value),updated_at:nowIso(),
     }));
     if(rows.length) await checked(db.from("app_settings").upsert(rows,{onConflict:"key"}));
