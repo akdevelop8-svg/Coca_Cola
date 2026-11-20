@@ -1104,20 +1104,6 @@ export function AdminDashboardPage() {
                                   onClick={() => {
                                     setCompletionModal({
                                       id: w.id,
-                                      targetStatus: 'processed',
-                                      currentRef: w.providerReference || '',
-                                    });
-                                    setCompletionRef(w.providerReference || '');
-                                  }}
-                                  className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold cursor-pointer"
-                                >
-                                  Mark Processed
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCompletionModal({
-                                      id: w.id,
                                       targetStatus: 'completed',
                                       currentRef: w.providerReference || '',
                                     });
@@ -2164,7 +2150,7 @@ export function AdminDashboardPage() {
               Mark Withdrawal as {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
             </h3>
             <p className="text-xs text-slate-600">
-              Make the bank transfer manually first, then enter the bank transaction short code (reference). No receipt upload is required. Funds remain reserved until you mark the transfer completed.
+              A different authorized administrator must complete this step from the person who approved the withdrawal. Confirm only after the company bank transfer has actually been sent and reconciled; enter its bank transaction reference. Funds remain reserved until completion.
             </p>
             <input
               type="text"
