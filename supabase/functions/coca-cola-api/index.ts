@@ -89,6 +89,7 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
   if (result.error) {
     const message = String(result.error.message || "Database operation failed.");
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
+    if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
     if (message.includes("INSUFFICIENT_AVAILABLE_BALANCE")) throw new ApiError("Your available wallet balance is insufficient.", 400);
     if (message.includes("PAYOUT_ACCOUNT_NOT_APPROVED")) throw new ApiError("Your bank account must be approved before withdrawing.", 400);
