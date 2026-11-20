@@ -1203,7 +1203,7 @@ async function route(request: Request): Promise<Response> {
       checked<any[]>(db.from("carousel_assets").select("*").order("sort_order")),
     ]);
     return json({
-      settings:app.settings,
+      settings:{...app.settings,promotionalRewardsEnabled:app.promotionalRewardsEnabled},
       channels:channels.map((x:any)=>({id:x.id,label:x.label,handleOrUrl:x.handle_or_url,href:x.href,kind:x.kind,isActive:x.is_active===1,sortOrder:x.sort_order})),
       carouselAssets:assets,
     });
