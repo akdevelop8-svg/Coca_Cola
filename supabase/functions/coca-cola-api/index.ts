@@ -102,6 +102,7 @@ const defaultSettings = {
   depositCbeAccountName: "CBE (Commercial Bank of Ethiopia)",
   depositCbeAccountNumber: "1000673029578",
   withdrawalMethodOnly: "CBE (Commercial Bank of Ethiopia)",
+  privacyPolicyUrl: "",
   maintenanceMode: false,
 };
 const companyInfo = {
@@ -1433,6 +1434,20 @@ async function route(request: Request): Promise<Response> {
     const normalizedChanges=Object.entries(changes).map(([key,value])=>[
       key==="promotionalRewardsEnabled" ? "promotional_rewards_enabled" : key, value,
     ]);
+    const privacyPolicyChange=normalizedChanges.find(([key])=>key==="privacyPolicyUrl");
+    if(privacyPolicyChange){
+      const candidate=String(privacyPolicyChange[1]??"").trim();
+      if(candidate){
+        let parsed:URL;
+        try{parsed=new URL(candidate);}catch{throw new ApiError("Privacy Policy URL must be a valid HTTPS link.",400);}
+        if(parsed.protocol!=="https:"||!parsed.hostname||parsed.username||parsed.password){
+          throw new ApiError("Privacy Policy URL must be a valid HTTPS link without embedded credentials.",400);
+        }
+        privacyPolicyChange[1]=parsed.toString();
+      }else{
+        privacyPolicyChange[1]="";
+      }
+    }
     const rows=normalizedChanges.filter(([k,v])=>allowed.has(String(k))&&v!==undefined).map(([key,value])=>({
       key,value:String(value),updated_at:nowIso(),
     }));
