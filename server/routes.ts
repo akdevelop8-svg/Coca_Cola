@@ -1982,7 +1982,6 @@ export function createApiRouter() {
     '/admin/deposits/:id/reject',
     requireAuth,
     requireAdminRole(['owner_admin', 'finance_admin']),
-    requireLiveFinance,
     (req: AuthenticatedRequest, res) => {
       const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
       if (reason.length < 3) {
