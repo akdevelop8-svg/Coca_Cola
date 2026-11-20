@@ -31,6 +31,36 @@ const ethiopiaDate = () =>
   }).format(new Date());
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 const uuid = (prefix: string) => prefix + crypto.randomUUID();
+async function loginRateKey(scope: string, value: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(SERVICE_KEY),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${scope}:${value}`),
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+async function consumeLoginLimit(keyHash: string, maxAttempts: number) {
+  const rows = await checked<any[]>(
+    db.rpc("consume_login_rate_limit", {
+      p_key_hash: keyHash,
+      p_max_attempts: maxAttempts,
+      p_window_seconds: 900,
+      p_block_seconds: 900,
+    }),
+    503,
+  );
+  const result = Array.isArray(rows) ? rows[0] : null;
+  if (!result?.allowed) {
+    throw new ApiError("Too many login attempts. Please wait 15 minutes and try again.", 429);
+  }
+}
 const maskAccount = (value: string) => {
   const digits = String(value || "").replace(/\s/g, "");
   return digits.length <= 4 ? digits : "•••• •••• " + digits.slice(-4);
@@ -570,13 +600,25 @@ async function route(request: Request): Promise<Response> {
   if (p === "auth/login" && method === "POST") {
     const identifier = String(body.identifier || body.phone || "").trim();
     const isPhoneIdentifier = isPhone(identifier) || /^09\d{8}$/.test(identifier) || /^2519\d{8}$/.test(identifier);
+    const normalizedIdentifier = isPhoneIdentifier
+      ? normalizePhone(identifier)
+      : identifier.toLowerCase();
+    const forwardedIp = request.headers.get("x-real-ip")
+      || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || "unknown";
+    const identityKey = await loginRateKey("identity", normalizedIdentifier || "empty");
+    const ipKey = await loginRateKey("ip", forwardedIp);
+    await consumeLoginLimit(identityKey, 5);
+    await consumeLoginLimit(ipKey, 30);
+
     let result: any;
-    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizePhone(identifier)).maybeSingle();
-    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", identifier.toLowerCase()).maybeSingle();
+    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizedIdentifier).maybeSingle();
+    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", normalizedIdentifier).maybeSingle();
     else result = await db.from("users").select("*").ilike("username", identifier).maybeSingle();
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
+    await checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503);
     await checked(db.from("users").update({ last_active_at: nowIso() }).eq("id", result.data.id));
     const token = await createSession(result.data.id);
     const [user, unreadNotifications] = await Promise.all([profileFor(result.data), unreadCount(result.data.id)]);
