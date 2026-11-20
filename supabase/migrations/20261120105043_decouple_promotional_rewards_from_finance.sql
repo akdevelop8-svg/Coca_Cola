@@ -107,3 +107,71 @@ BEGIN
   RETURN jsonb_build_object('checkinId',v_id,'ethiopiaDate',v_today,'amount',round(v_amount,2));
 END;
 $function$;
+
+
+-- Promotional credits use their own gate. All other wallet ledger operations
+-- remain protected by financial_operations_enabled.
+CREATE OR REPLACE FUNCTION public.wallet_post_entry(
+  p_user_id text,
+  p_type text,
+  p_amount_signed numeric,
+  p_reserved_delta numeric DEFAULT 0,
+  p_promo_delta numeric DEFAULT 0,
+  p_earnings_delta numeric DEFAULT 0,
+  p_reward_delta numeric DEFAULT 0,
+  p_commission_delta numeric DEFAULT 0,
+  p_reference_id text DEFAULT NULL,
+  p_note text DEFAULT NULL,
+  p_idempotency_key text DEFAULT NULL
+) RETURNS public.ledger_entries
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public','pg_temp'
+AS $function$
+DECLARE
+  v_existing public.ledger_entries%ROWTYPE;
+  v_available numeric(14,2);
+  v_reserved numeric(14,2);
+  v_row public.ledger_entries%ROWTYPE;
+BEGIN
+  IF p_type IN ('registration_bonus','daily_checkin') THEN
+    PERFORM public.assert_promotional_rewards_enabled();
+  ELSE
+    PERFORM public.assert_financial_operations_enabled();
+  END IF;
+
+  PERFORM 1 FROM public.users WHERE id=p_user_id AND status='active' FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'USER_NOT_ACTIVE' USING ERRCODE='P0002'; END IF;
+
+  IF p_idempotency_key IS NOT NULL THEN
+    SELECT * INTO v_existing FROM public.ledger_entries WHERE idempotency_key=p_idempotency_key;
+    IF FOUND THEN
+      IF v_existing.user_id<>p_user_id THEN
+        RAISE EXCEPTION 'IDEMPOTENCY_KEY_CONFLICT' USING ERRCODE='23505';
+      END IF;
+      RETURN v_existing;
+    END IF;
+  END IF;
+
+  SELECT COALESCE(SUM(amount_signed),0),COALESCE(SUM(reserved_delta),0)
+    INTO v_available,v_reserved
+    FROM public.ledger_entries WHERE user_id=p_user_id;
+
+  v_available:=round(v_available+COALESCE(p_amount_signed,0),2);
+  v_reserved:=round(v_reserved+COALESCE(p_reserved_delta,0),2);
+  IF v_available<0 THEN RAISE EXCEPTION 'INSUFFICIENT_AVAILABLE_BALANCE' USING ERRCODE='22003'; END IF;
+  IF v_reserved<0 THEN RAISE EXCEPTION 'INVALID_RESERVED_BALANCE' USING ERRCODE='22003'; END IF;
+
+  INSERT INTO public.ledger_entries(
+    id,user_id,type,amount_signed,reserved_delta,promo_delta,earnings_delta,reward_delta,
+    commission_delta,balance_after,status,reference_id,note,idempotency_key,created_at
+  ) VALUES (
+    'ldg_'||gen_random_uuid()::text,p_user_id,p_type,round(COALESCE(p_amount_signed,0),2),
+    round(COALESCE(p_reserved_delta,0),2),round(COALESCE(p_promo_delta,0),2),
+    round(COALESCE(p_earnings_delta,0),2),round(COALESCE(p_reward_delta,0),2),
+    round(COALESCE(p_commission_delta,0),2),v_available,'posted',p_reference_id,p_note,
+    p_idempotency_key,now()
+  ) RETURNING * INTO v_row;
+  RETURN v_row;
+END;
+$function$;
