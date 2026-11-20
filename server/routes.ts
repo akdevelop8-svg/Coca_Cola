@@ -405,9 +405,9 @@ export function createApiRouter() {
     const userRow = db
       .prepare(
         `SELECT id, password_hash, role, status FROM users
-         WHERE phone = ? OR phone = ? OR LOWER(email) = LOWER(?)`
+         WHERE phone = ? OR phone = ? OR LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)`
       )
-      .get(normalizedPhone || rawId, rawId, rawId) as
+      .get(normalizedPhone || rawId, rawId, rawId, rawId) as
       | { id: string; password_hash: string; role: UserRole; status: string }
       | undefined;
 
