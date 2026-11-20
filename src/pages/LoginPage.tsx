@@ -182,6 +182,13 @@ export function LoginPage() {
               Create Account
             </Link>
           </p>
+          {config?.settings?.privacyPolicyUrl && (
+            <p className="mt-4 text-center text-xs text-slate-500">
+              <a href={config.settings.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#B80D13] hover:underline">
+                Privacy Policy
+              </a>
+            </p>
+          )}
         </div>
       </div>
     </div>

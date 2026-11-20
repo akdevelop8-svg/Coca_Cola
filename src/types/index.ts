@@ -339,6 +339,7 @@ export interface PlatformConfig {
   customDomainConfigured: boolean;
   settings: {
     termsVersion: string;
+    privacyPolicyUrl: string;
     registrationBonus: number;
     dailyCheckinAmount: number;
     minWithdrawal: number;
