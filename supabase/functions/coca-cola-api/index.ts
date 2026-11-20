@@ -618,10 +618,10 @@ async function route(request: Request): Promise<Response> {
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
-    await Promise.all([
-      checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503),
-      checked(db.rpc("clear_login_rate_limit", { p_key_hash: ipKey }), 503),
-    ]);
+    // Reset the successfully authenticated identity bucket only.
+    // Keep the shared IP bucket intact so one valid account cannot reset
+    // the IP-wide brute-force protection for other customer accounts.
+    await checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503);
     await checked(db.from("users").update({ last_active_at: nowIso() }).eq("id", result.data.id));
     const token = await createSession(result.data.id);
     const [user, unreadNotifications] = await Promise.all([profileFor(result.data), unreadCount(result.data.id)]);
