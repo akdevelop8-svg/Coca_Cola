@@ -33,7 +33,6 @@ import type {
   GiftCodeRecord,
   GiftCodeRedemptionRecord,
   PaymentMethodRecord,
-  PayoutChangeRequestRecord,
   SupportChannel,
   SupportTicket,
   WithdrawalRequest,
@@ -76,8 +75,6 @@ export function AdminDashboardPage() {
   const [withdrawalFilter, setWithdrawalFilter] = useState<
     'all' | 'pending' | 'approved' | 'processed' | 'completed' | 'rejected'
   >('all');
-  const [payoutAccounts, setPayoutAccounts] = useState<any[]>([]);
-  const [changeRequests, setChangeRequests] = useState<PayoutChangeRequestRecord[]>([]);
   const [completionModal, setCompletionModal] = useState<{
     id: string;
     targetStatus: 'processed' | 'completed';
@@ -135,7 +132,7 @@ export function AdminDashboardPage() {
 
   // Shared Rejection Modal
   const [rejectModal, setRejectModal] = useState<{
-    kind: 'deposit' | 'withdrawal' | 'payout_acct' | 'change_req';
+    kind: 'deposit' | 'withdrawal';
     id: string;
   } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -170,15 +167,8 @@ export function AdminDashboardPage() {
         const res = await apiFetch<{ deposits: DepositRequest[] }>('/api/admin/deposits');
         setDeposits(res.deposits);
       } else if (targetTab === 'withdrawals') {
-        const [wRes, pRes] = await Promise.all([
-          apiFetch<{ withdrawals: WithdrawalRequest[] }>('/api/admin/withdrawals'),
-          apiFetch<{ accounts: any[]; changeRequests: PayoutChangeRequestRecord[] }>(
-            '/api/admin/payout-accounts'
-          ),
-        ]);
-        setWithdrawals(wRes.withdrawals);
-        setPayoutAccounts(pRes.accounts);
-        setChangeRequests(pRes.changeRequests);
+        const res = await apiFetch<{ withdrawals: WithdrawalRequest[] }>('/api/admin/withdrawals');
+        setWithdrawals(res.withdrawals);
       } else if (targetTab === 'tickets') {
         const res = await apiFetch<{ tickets: SupportTicket[] }>('/api/admin/tickets');
         setTickets(res.tickets);
@@ -218,6 +208,15 @@ export function AdminDashboardPage() {
   useEffect(() => {
     void loadTab(tab);
   }, [tab]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void apiFetch('/api/admin/overview')
+        .then((result) => setOverview(result))
+        .catch(() => undefined);
+    }, 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // --- Deposit Handlers ---
   const handleApproveDeposit = async (id: string) => {
@@ -274,36 +273,6 @@ export function AdminDashboardPage() {
     }
   };
 
-  const handleApprovePayoutAccount = async (id: string) => {
-    setErrorMsg('');
-    setStatusMsg('');
-    try {
-      await apiFetch(`/api/admin/payout-accounts/${id}/review`, {
-        method: 'POST',
-        body: JSON.stringify({ status: 'approved', note: 'Verified payout account' }),
-      });
-      setStatusMsg('Customer payout account approved.');
-      await loadTab('withdrawals');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Could not approve payout account.');
-    }
-  };
-
-  const handleApproveChangeReq = async (id: string) => {
-    setErrorMsg('');
-    setStatusMsg('');
-    try {
-      await apiFetch(`/api/admin/payout-change-requests/${id}/review`, {
-        method: 'POST',
-        body: JSON.stringify({ status: 'approved', note: 'Approved by Admin' }),
-      });
-      setStatusMsg('Payout account change request approved.');
-      await loadTab('withdrawals');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Could not approve change request.');
-    }
-  };
-
   const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectModal) return;
@@ -324,21 +293,6 @@ export function AdminDashboardPage() {
         });
         setStatusMsg('Withdrawal rejected and reserved balance released.');
         await loadTab('withdrawals');
-      } else if (rejectModal.kind === 'payout_acct') {
-        await apiFetch(`/api/admin/payout-accounts/${rejectModal.id}/review`, {
-          method: 'POST',
-          body: JSON.stringify({ status: 'rejected', note: rejectReason }),
-        });
-        setStatusMsg('Customer payout account rejected.');
-        await loadTab('withdrawals');
-      } else if (rejectModal.kind === 'change_req') {
-        await apiFetch(`/api/admin/payout-change-requests/${rejectModal.id}/review`, {
-          method: 'POST',
-          body: JSON.stringify({ status: 'rejected', note: rejectReason }),
-        });
-        setStatusMsg('Payout account change request rejected.');
-        await loadTab('withdrawals');
-      }
       setRejectModal(null);
       setRejectReason('');
     } catch (err: any) {
@@ -697,6 +651,18 @@ export function AdminDashboardPage() {
         <nav aria-label="Admin Dashboard Sections" className="flex flex-wrap gap-1.5 bg-white p-2 rounded-2xl border border-slate-200">
           {tabs.map((t) => {
             const Icon = t.icon;
+            const count = t.id === 'deposits'
+              ? Number(overview?.pendingDepositsCount || 0)
+              : t.id === 'withdrawals'
+                ? Number(overview?.pendingWithdrawalsCount || 0)
+                : t.id === 'tickets'
+                  ? Number(overview?.unreadTickets || 0)
+                  : 0;
+            const amount = t.id === 'deposits'
+              ? Number(overview?.pendingDepositsAmount || 0)
+              : t.id === 'withdrawals'
+                ? Number(overview?.pendingWithdrawalsAmount || 0)
+                : 0;
             return (
               <button
                 key={t.id}
@@ -710,6 +676,15 @@ export function AdminDashboardPage() {
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{t.label}</span>
+                {count > 0 && (
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums whitespace-nowrap ${
+                    tab === t.id ? 'bg-white text-[#B80D13]' :
+                    t.id === 'tickets' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {count}
+                    {t.id !== 'tickets' && ` · ${formatBrExact(amount)}`}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -768,7 +743,6 @@ export function AdminDashboardPage() {
                 { label: 'Pending Withdrawals', val: `${overview.pendingWithdrawalsCount} (${formatBrExact(overview.pendingWithdrawalsAmount)})` },
                 { label: 'Approved Withdrawals', val: formatBrExact(overview.approvedWithdrawalsTotal) },
                 { label: 'Completed Withdrawals', val: overview.completedWithdrawalsCount ?? 0 },
-                { label: 'Pending Payout Accounts', val: overview.pendingPayoutAccounts },
                 { label: 'Unread / Open Feedback', val: `${overview.unreadTickets ?? 0} unread / ${overview.openTickets}` },
                 { label: 'Verified Sales', val: `${overview.verifiedSalesCount} (${formatBrExact(overview.verifiedSalesVolume)})` },
               ].map((stat) => (
@@ -1179,99 +1153,11 @@ export function AdminDashboardPage() {
               )}
             </div>
 
-            {/* Saved Customer Payout Accounts */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 font-bold text-sm">
-                Saved Customer Payout Accounts Verification
-              </div>
-              {payoutAccounts.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-500">No saved payout accounts yet.</p>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {payoutAccounts.map((a) => (
-                    <div key={a.id} className="p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                      <div>
-                        <p className="font-bold font-mono text-slate-900">{a.customerPhone}</p>
-                        <p className="text-xs text-slate-600 font-mono">
-                          {a.methodName} · {a.accountNumber} · Holder: {a.accountOwnerName}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase">{a.status}</span>
-                        {a.status === 'pending' && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleApprovePayoutAccount(a.id)}
-                              className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-semibold cursor-pointer"
-                            >
-                              Approve Account
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setRejectModal({ kind: 'payout_acct', id: a.id });
-                                setRejectReason('');
-                              }}
-                              className="px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-semibold cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Payout Account Change Requests */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 font-bold text-sm">
-                Payout Account Change Requests
-              </div>
-              {changeRequests.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-500">No account change requests.</p>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {changeRequests.map((cr) => (
-                    <div key={cr.id} className="p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                      <div>
-                        <p className="font-bold font-mono text-slate-900">{cr.customerPhone}</p>
-                        <p className="text-xs text-slate-600 font-mono">
-                          New: {cr.newMethodName} · {cr.newAccountNumber} · {cr.newAccountOwnerName}
-                        </p>
-                        <p className="text-xs text-slate-500">Reason: {cr.reason}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase">{cr.status}</span>
-                        {cr.status === 'pending' && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleApproveChangeReq(cr.id)}
-                              className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-semibold cursor-pointer"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setRejectModal({ kind: 'change_req', id: cr.id });
-                                setRejectReason('');
-                              }}
-                              className="px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-semibold cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              <p className="font-bold">Customer-managed payout accounts</p>
+              <p className="mt-1 text-xs leading-5">
+                Customers save and update their own payout details. Admin approval is not required, and saved account details are not listed in this dashboard. The bank account snapshot is included with each withdrawal request for processing.
+              </p>
             </div>
           </div>
         )}
