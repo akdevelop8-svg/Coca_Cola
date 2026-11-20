@@ -554,7 +554,7 @@ async function route(request: Request): Promise<Response> {
     (
       ["plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
       /^income\/claim\/[^/]+$/.test(p) ||
-      /^admin\/deposits\/[^/]+\/(approve|reject)$/.test(p) ||
+      /^admin\/deposits\/[^/]+\/approve$/.test(p) ||
       /^admin\/withdrawals\/[^/]+\/(approve|reject|complete)$/.test(p)
     );
   if (requiresFinancialApproval) {
