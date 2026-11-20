@@ -1850,6 +1850,23 @@ export function AdminDashboardPage() {
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
                       />
                     </div>
+                    <label className="col-span-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settingsForm.promotionalRewardsEnabled)}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            promotionalRewardsEnabled: e.target.checked,
+                          })
+                        }
+                        className="mt-0.5 h-4 w-4 accent-[#D71920]"
+                      />
+                      <span>
+                        <strong className="block">Enable Registration Bonus and Daily Check-in rewards</strong>
+                        When enabled, new users receive {settingsForm.registrationBonus} ETB and eligible users can claim {settingsForm.dailyCheckinAmount ?? 2} ETB each Ethiopia calendar day. These are real wallet credits and create funding liabilities. Enable only after the reward budget and customer terms are approved and funded.
+                      </span>
+                    </label>
                   </div>
                   <button
                     type="submit"

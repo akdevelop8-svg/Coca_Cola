@@ -89,6 +89,7 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
   if (result.error) {
     const message = String(result.error.message || "Database operation failed.");
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
+    if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
     if (message.includes("INSUFFICIENT_AVAILABLE_BALANCE")) throw new ApiError("Your available wallet balance is insufficient.", 400);
     if (message.includes("PAYOUT_ACCOUNT_NOT_APPROVED")) throw new ApiError("Your bank account must be approved before withdrawing.", 400);
@@ -125,7 +126,10 @@ async function getAppSettings() {
   const financialOperationsEnabled = ["true", "1", "yes", "enabled"].includes(
     String(values.financial_operations_enabled || "false").toLowerCase(),
   );
-  return { settings: parsed, values, financialOperationsEnabled };
+  const promotionalRewardsEnabled = ["true", "1", "yes", "enabled"].includes(
+    String(values.promotional_rewards_enabled || "false").toLowerCase(),
+  );
+  return { settings: parsed, values, financialOperationsEnabled, promotionalRewardsEnabled };
 }
 async function profileFor(user: any) {
   const [termsResult, inviterResult] = await Promise.all([
@@ -548,7 +552,7 @@ async function route(request: Request): Promise<Response> {
   const requiresFinancialApproval =
     method === "POST" &&
     (
-      ["checkin", "plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
+      ["plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
       /^income\/claim\/[^/]+$/.test(p) ||
       /^admin\/deposits\/[^/]+\/(approve|reject)$/.test(p) ||
       /^admin\/withdrawals\/[^/]+\/(approve|reject|complete)$/.test(p)
@@ -620,6 +624,10 @@ async function route(request: Request): Promise<Response> {
     });
   }
   if (p === "checkin" && method === "POST") {
+    const rewardSettings = await getAppSettings();
+    if (!rewardSettings.promotionalRewardsEnabled) {
+      throw new ApiError("Promotional rewards are temporarily disabled.", 503);
+    }
     const result = await checked<any>(db.rpc("claim_daily_checkin_atomic", { p_user_id: user.id }));
     return json({ message: "Daily check-in reward claimed.", ...result, availableBalance: (await getBalances(user.id)).availableBalance });
   }
@@ -1196,7 +1204,7 @@ async function route(request: Request): Promise<Response> {
       checked<any[]>(db.from("carousel_assets").select("*").order("sort_order")),
     ]);
     return json({
-      settings:app.settings,
+      settings:{...app.settings,promotionalRewardsEnabled:app.promotionalRewardsEnabled},
       channels:channels.map((x:any)=>({id:x.id,label:x.label,handleOrUrl:x.handle_or_url,href:x.href,kind:x.kind,isActive:x.is_active===1,sortOrder:x.sort_order})),
       carouselAssets:assets,
     });
@@ -1233,12 +1241,15 @@ async function route(request: Request): Promise<Response> {
 
   if(p==="admin/settings" && method==="GET"){
     const app=await getAppSettings();
-    return json({settings:app.settings,financialOperationsEnabled:app.financialOperationsEnabled});
+    return json({settings:app.settings,financialOperationsEnabled:app.financialOperationsEnabled,promotionalRewardsEnabled:app.promotionalRewardsEnabled});
   }
   if(p==="admin/settings" && ["POST","PUT","PATCH"].includes(method)){
     const changes=body.settings||body;
-    const allowed=new Set(Object.keys(defaultSettings).concat(["financial_operations_enabled"]));
-    const rows=Object.entries(changes).filter(([k,v])=>allowed.has(k)&&v!==undefined).map(([key,value])=>({
+    const allowed=new Set(Object.keys(defaultSettings).concat(["financial_operations_enabled","promotional_rewards_enabled"]));
+    const normalizedChanges=Object.entries(changes).map(([key,value])=>[
+      key==="promotionalRewardsEnabled" ? "promotional_rewards_enabled" : key, value,
+    ]);
+    const rows=normalizedChanges.filter(([k,v])=>allowed.has(String(k))&&v!==undefined).map(([key,value])=>({
       key,value:String(value),updated_at:nowIso(),
     }));
     if(rows.length) await checked(db.from("app_settings").upsert(rows,{onConflict:"key"}));
