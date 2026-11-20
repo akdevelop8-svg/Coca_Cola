@@ -251,8 +251,8 @@ export function AdminDashboardPage() {
   const handleConfirmWithdrawalComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completionModal) return;
-    if (!completionRef.trim()) {
-      setErrorMsg('Enter the actual bank transfer reference after making the manual bank transfer.');
+    if (completionRef.trim().length < 4) {
+      setErrorMsg('Enter the bank transaction short code (at least 4 characters) after making the manual bank transfer.');
       return;
     }
     setErrorMsg('');
@@ -262,7 +262,7 @@ export function AdminDashboardPage() {
         method: 'POST',
         body: JSON.stringify({
           status: completionModal.targetStatus,
-          providerReference: completionRef.trim() || undefined,
+          bankTransferReference: completionRef.trim(),
         }),
       });
       setStatusMsg(`Withdrawal marked as ${completionModal.targetStatus} and customer notified.`);
@@ -2243,13 +2243,14 @@ export function AdminDashboardPage() {
               Mark Withdrawal as {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
             </h3>
             <p className="text-xs text-slate-600">
-              Make the bank transfer manually first, then enter the real bank reference. Funds remain reserved until you mark the transfer completed.
+              Make the bank transfer manually first, then enter the bank transaction short code (reference). No receipt upload is required. Funds remain reserved until you mark the transfer completed.
             </p>
             <input
               type="text"
               value={completionRef}
               onChange={(e) => setCompletionRef(e.target.value)}
-              placeholder="Actual Bank Transfer Reference (required)"
+              placeholder="Bank Transaction Short Code (min 4 characters)"
+              minLength={4}
               required
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
@@ -2264,7 +2265,7 @@ export function AdminDashboardPage() {
               </button>
               <button
                 type="submit"
-                disabled={!completionRef.trim()}
+                disabled={completionRef.trim().length < 4}
                 className="flex-1 py-2.5 rounded-full bg-emerald-700 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
