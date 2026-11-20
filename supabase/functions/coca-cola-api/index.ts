@@ -603,8 +603,8 @@ async function route(request: Request): Promise<Response> {
     const normalizedIdentifier = isPhoneIdentifier
       ? normalizePhone(identifier)
       : identifier.toLowerCase();
-    const forwardedIp = request.headers.get("x-real-ip")
-      || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || request.headers.get("x-real-ip")
       || "unknown";
     const identityKey = await loginRateKey("identity", normalizedIdentifier || "empty");
     const ipKey = await loginRateKey("ip", forwardedIp);
@@ -618,7 +618,10 @@ async function route(request: Request): Promise<Response> {
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
-    await checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503);
+    await Promise.all([
+      checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503),
+      checked(db.rpc("clear_login_rate_limit", { p_key_hash: ipKey }), 503),
+    ]);
     await checked(db.from("users").update({ last_active_at: nowIso() }).eq("id", result.data.id));
     const token = await createSession(result.data.id);
     const [user, unreadNotifications] = await Promise.all([profileFor(result.data), unreadCount(result.data.id)]);
