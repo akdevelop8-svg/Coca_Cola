@@ -35,6 +35,10 @@ export default async function handler(req, res) {
   if (typeof contentType === "string") headers.set("content-type", contentType);
   const accept = req.headers?.accept;
   if (typeof accept === "string") headers.set("accept", accept);
+  const forwardedFor = req.headers?.["x-forwarded-for"];
+  if (typeof forwardedFor === "string") headers.set("x-forwarded-for", forwardedFor);
+  const realIp = req.headers?.["x-real-ip"];
+  if (typeof realIp === "string") headers.set("x-real-ip", realIp);
 
   const method = (req.method || "GET").toUpperCase();
 

@@ -71,7 +71,7 @@ export function WithdrawPage() {
       return;
     }
     if (payoutAccount.status !== 'approved') {
-      setError('Your saved payout account must be approved by an Admin before requesting a withdrawal.');
+      setError('Please save or update your payout details in Bank Account Management before requesting a withdrawal.');
       return;
     }
     if (!breakdown.isValid) {
@@ -154,7 +154,7 @@ export function WithdrawPage() {
                   <div className="flex items-center gap-2">
                     <Landmark className="w-4 h-4 text-[#D71920]" />
                     <span className="text-xs font-bold text-slate-900">
-                      Allowed Payout Method: {activePayoutNames}
+                      Your Saved Payout Method: {activePayoutNames}
                     </span>
                   </div>
                   <Link
@@ -171,7 +171,7 @@ export function WithdrawPage() {
                     <Link to="/my/bank-account" className="font-bold underline">
                       Save your payout account
                     </Link>{' '}
-                    before requesting a withdrawal.
+                    before requesting a withdrawal. Admin approval is not required.
                   </div>
                 ) : (
                   <div className="flex items-center justify-between text-xs pt-1">
@@ -191,10 +191,8 @@ export function WithdrawPage() {
                       }`}
                     >
                       {payoutAccount.status === 'approved'
-                        ? 'Approved'
-                        : payoutAccount.status === 'rejected'
-                        ? 'Rejected'
-                        : 'Pending Approval'}
+                        ? 'Saved · Ready'
+                        : 'Update Required'}
                     </span>
                   </div>
                 )}

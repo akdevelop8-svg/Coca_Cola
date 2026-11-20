@@ -31,6 +31,36 @@ const ethiopiaDate = () =>
   }).format(new Date());
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 const uuid = (prefix: string) => prefix + crypto.randomUUID();
+async function loginRateKey(scope: string, value: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(SERVICE_KEY),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${scope}:${value}`),
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+async function consumeLoginLimit(keyHash: string, maxAttempts: number) {
+  const rows = await checked<any[]>(
+    db.rpc("consume_login_rate_limit", {
+      p_key_hash: keyHash,
+      p_max_attempts: maxAttempts,
+      p_window_seconds: 900,
+      p_block_seconds: 900,
+    }),
+    503,
+  );
+  const result = Array.isArray(rows) ? rows[0] : null;
+  if (!result?.allowed) {
+    throw new ApiError("Too many login attempts. Please wait 15 minutes and try again.", 429);
+  }
+}
 const maskAccount = (value: string) => {
   const digits = String(value || "").replace(/\s/g, "");
   return digits.length <= 4 ? digits : "•••• •••• " + digits.slice(-4);
@@ -161,6 +191,61 @@ async function unreadCount(userId: string) {
   const r = await db.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", 0);
   if (r.error) return 0;
   return r.count || 0;
+}
+async function notifyUsers(
+  userIds: string[],
+  title: string,
+  body: string,
+  kind: string,
+  actionUrl: string | null = null,
+) {
+  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return;
+  const rows = uniqueIds.map((userId) => ({
+    id: uuid("ntf_"),
+    user_id: userId,
+    title,
+    body,
+    kind,
+    action_url: actionUrl,
+    image_url: null,
+    broadcast_id: null,
+    is_read: 0,
+    created_at: nowIso(),
+  }));
+  try {
+    const result = await db.from("notifications").insert(rows);
+    if (result.error) console.error("Notification delivery failed:", result.error.message);
+  } catch (error) {
+    console.error("Notification delivery failed:", error instanceof Error ? error.message : "Unknown error");
+  }
+}
+async function notifyCustomer(
+  userId: string,
+  title: string,
+  body: string,
+  kind: string,
+  actionUrl: string | null = null,
+) {
+  await notifyUsers([userId], title, body, kind, actionUrl);
+}
+async function notifyAdmins(
+  roles: string[],
+  title: string,
+  body: string,
+  kind: string,
+  actionUrl: string | null = "/admin",
+) {
+  try {
+    const result = await db.from("users").select("id").in("role", roles).eq("status", "active");
+    if (result.error) {
+      console.error("Admin notification recipients could not be loaded:", result.error.message);
+      return;
+    }
+    await notifyUsers((result.data || []).map((row: any) => row.id), title, body, kind, actionUrl);
+  } catch (error) {
+    console.error("Admin notification recipients could not be loaded:", error instanceof Error ? error.message : "Unknown error");
+  }
 }
 async function createSession(userId: string) {
   const token = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
@@ -515,13 +600,28 @@ async function route(request: Request): Promise<Response> {
   if (p === "auth/login" && method === "POST") {
     const identifier = String(body.identifier || body.phone || "").trim();
     const isPhoneIdentifier = isPhone(identifier) || /^09\d{8}$/.test(identifier) || /^2519\d{8}$/.test(identifier);
+    const normalizedIdentifier = isPhoneIdentifier
+      ? normalizePhone(identifier)
+      : identifier.toLowerCase();
+    const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || request.headers.get("x-real-ip")
+      || "unknown";
+    const identityKey = await loginRateKey("identity", normalizedIdentifier || "empty");
+    const ipKey = await loginRateKey("ip", forwardedIp);
+    await consumeLoginLimit(identityKey, 5);
+    await consumeLoginLimit(ipKey, 30);
+
     let result: any;
-    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizePhone(identifier)).maybeSingle();
-    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", identifier.toLowerCase()).maybeSingle();
+    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizedIdentifier).maybeSingle();
+    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", normalizedIdentifier).maybeSingle();
     else result = await db.from("users").select("*").ilike("username", identifier).maybeSingle();
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
+    // Reset the successfully authenticated identity bucket only.
+    // Keep the shared IP bucket intact so one valid account cannot reset
+    // the IP-wide brute-force protection for other customer accounts.
+    await checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503);
     await checked(db.from("users").update({ last_active_at: nowIso() }).eq("id", result.data.id));
     const token = await createSession(result.data.id);
     const [user, unreadNotifications] = await Promise.all([profileFor(result.data), unreadCount(result.data.id)]);
@@ -554,7 +654,7 @@ async function route(request: Request): Promise<Response> {
     (
       ["plans/purchase", "deposits", "withdrawals", "tasks/claim", "gift-codes/redeem"].includes(p) ||
       /^income\/claim\/[^/]+$/.test(p) ||
-      /^admin\/deposits\/[^/]+\/(approve|reject)$/.test(p) ||
+      /^admin\/deposits\/[^/]+\/approve$/.test(p) ||
       /^admin\/withdrawals\/[^/]+\/(approve|reject|complete)$/.test(p)
     );
   if (requiresFinancialApproval) {
@@ -629,6 +729,7 @@ async function route(request: Request): Promise<Response> {
       throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     }
     const result = await checked<any>(db.rpc("claim_daily_checkin_atomic", { p_user_id: user.id }));
+    await notifyCustomer(user.id, "Daily check-in credited", "Your daily check-in reward was successfully credited to your wallet.", "daily_checkin", "/checkin");
     return json({ message: "Daily check-in reward claimed.", ...result, availableBalance: (await getBalances(user.id)).availableBalance });
   }
 
@@ -641,6 +742,7 @@ async function route(request: Request): Promise<Response> {
       p_user_id: user.id, p_plan_code: plan.code, p_amount: plan.investment,
       p_daily_rate: plan.dailyMining, p_idempotency_key: idempotencyKey,
     }));
+    await notifyCustomer(user.id, "Plan activated", `Plan ${plan.code} was successfully activated. Your plan details are available in the Income section.`, "plan_purchase", "/income");
     return json({ message: "Plan purchase completed.", purchase: result, ...result });
   }
 
@@ -697,6 +799,7 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("claim_daily_mining_atomic", {
       p_user_id: user.id, p_purchase_id: decodeURIComponent(incomeClaim[1]), p_ethiopia_date: ethiopiaDate(),
     }));
+    await notifyCustomer(user.id, "Daily earnings credited", `Your daily mining earnings of ${Number(result.amount || 0).toFixed(2)} ETB were credited to your wallet.`, "daily_mining", "/income");
     return json({ message: "Daily mining reward claimed.", ...result, ...await getBalances(user.id) });
   }
 
@@ -707,6 +810,7 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("claim_team_value_task_atomic", {
       p_user_id: user.id, p_task_id: String(body.taskId || ""),
     }));
+    await notifyCustomer(user.id, "Team task reward credited", `Your team task reward of ${Number(result.amount || result.rewardAmount || 0).toFixed(2)} ETB was credited to your wallet.`, "task_reward", "/task");
     return json({ message: "Team task reward claimed.", ...result, ...await teamTaskSummary(user.id) });
   }
 
@@ -749,6 +853,14 @@ async function route(request: Request): Promise<Response> {
       amount: round2(amount), tx_reference: txReference, receipt_path: filePath,
       receipt_mime: receipt.type, status: "pending", created_at: nowIso(),
     }).select("*").single());
+    const amountLabel = round2(amount).toFixed(2) + " ETB";
+    await notifyCustomer(user.id, "Deposit request received", `Your deposit request for ${amountLabel} was submitted and is awaiting review.`, "deposit_submitted", "/recharge");
+    await notifyAdmins(
+      ["owner_admin", "finance_admin", "admin", "super_admin"],
+      "New deposit request",
+      `A customer submitted a ${amountLabel} deposit request. Review the receipt and bank reference.`,
+      "admin_deposit",
+    );
     return json({ message: "Deposit request submitted for administrator review.", deposit: depositDto(row) }, 201);
   }
 
@@ -763,21 +875,42 @@ async function route(request: Request): Promise<Response> {
       changeRequests: changeRequests.map(payoutChangeRequestDto),
     });
   }
-  if (p === "payout-account" && method === "POST") {
+  if (p === "payout-account" && ["POST", "PUT", "PATCH"].includes(method)) {
     const methodId = String(body.methodId || "").trim();
     const accountNumber = String(body.accountNumber || "").trim();
     const ownerName = String(body.accountOwnerName || body.accountName || "").trim();
-    if (!methodId || accountNumber.length < 5 || !ownerName) throw new ApiError("Select a payout method and enter the account number and account owner.", 400);
+    if (!methodId || accountNumber.length < 5 || !ownerName) {
+      throw new ApiError("Select a payout method and enter the account number and account owner.", 400);
+    }
     const selectedMethod = await checked<any>(db.from("payment_methods").select("name")
       .eq("id", methodId).eq("kind", "payout").eq("is_active", 1).maybeSingle());
     if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
-    const existing = await checked<any>(db.from("payout_accounts").select("id,status").eq("user_id", user.id).maybeSingle());
-    if (existing) throw new ApiError("An account is already on file. Use the change request process.", 409);
-    const row = await checked<any>(db.from("payout_accounts").insert({
-      id: uuid("pay_"), user_id: user.id, method_name: selectedMethod.name, account_number: accountNumber,
-      account_owner_name: ownerName, status: "pending", is_locked: 1, updated_at: nowIso(),
-    }).select("*").single());
-    return json({ message: "Bank account submitted for administrator approval.", account: payoutDto(row) }, 201);
+    const existing = await checked<any>(db.from("payout_accounts").select("id").eq("user_id", user.id).maybeSingle());
+    const values = {
+      method_name: selectedMethod.name,
+      account_number: accountNumber,
+      account_owner_name: ownerName,
+      status: "approved",
+      is_locked: 0,
+      review_note: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      updated_at: nowIso(),
+    };
+    const row = existing
+      ? await checked<any>(db.from("payout_accounts").update(values).eq("user_id", user.id).select("*").single())
+      : await checked<any>(db.from("payout_accounts").insert({ id: uuid("pay_"), user_id: user.id, ...values }).select("*").single());
+    await notifyCustomer(
+      user.id,
+      "Payout account saved",
+      `${selectedMethod.name} account ending ${accountNumber.slice(-4)} was saved and is ready to use for future withdrawal requests. You can update it any time.`,
+      "payout_account_saved",
+      "/my/bank-account",
+    );
+    return json({
+      message: existing ? "Payout account updated. It is ready for withdrawals." : "Payout account saved. It is ready for withdrawals.",
+      account: payoutDto(row),
+    }, existing ? 200 : 201);
   }
   if (p === "payout-account/change-request" && method === "POST") {
     const reason = String(body.reason || "").trim();
@@ -804,6 +937,23 @@ async function route(request: Request): Promise<Response> {
       p_user_id: user.id, p_idempotency_key: String(body.idempotencyKey || crypto.randomUUID()),
       p_gross_amount: Number(body.amount),
     }));
+    const gross = Number(result.grossAmount || body.amount || 0);
+    const fee = Number(result.feeAmount || 0);
+    const net = Number(result.netAmount || 0);
+    const amountLabel = gross.toFixed(2) + " ETB";
+    await notifyCustomer(
+      user.id,
+      "Withdrawal request received",
+      `Your withdrawal request for ${amountLabel} (fee ${fee.toFixed(2)} ETB; net ${net.toFixed(2)} ETB) was received and is awaiting review.`,
+      "withdrawal_requested",
+      "/withdraw",
+    );
+    await notifyAdmins(
+      ["owner_admin", "finance_admin", "admin", "super_admin"],
+      "New withdrawal request",
+      `A customer requested ${amountLabel}; net payout is ${net.toFixed(2)} ETB. Review the saved bank details and process the request.`,
+      "admin_withdrawal",
+    );
     return json({ message: "Withdrawal request submitted for administrator review.", withdrawal: result, ...result }, 201);
   }
 
@@ -852,6 +1002,13 @@ async function route(request: Request): Promise<Response> {
       id: uuid("msg_"), ticket_id: ticketId, sender_id: user.id, sender_role: user.role,
       message, created_at: nowIso(),
     }));
+    await notifyAdmins(
+      ["owner_admin", "support_admin", "admin", "super_admin"],
+      "New customer support message",
+      `${user.full_name || "A customer"} opened a support ticket: ${subject}`,
+      "admin_support",
+    );
+    await notifyCustomer(user.id, "Support request received", `Your message “${subject}” was sent to Customer Service.`, "support_ticket", "/service");
     return json({ message: "Support ticket submitted.", ticket: inserted }, 201);
   }
   const supportReply = p.match(/^support\/tickets\/([^/]+)\/reply$/);
@@ -868,6 +1025,22 @@ async function route(request: Request): Promise<Response> {
       message, created_at: nowIso(),
     }));
     await checked(db.from("support_tickets").update({ updated_at: nowIso(), is_read_by_admin: user.role === "customer" ? 0 : 1 }).eq("id", ticketId));
+    if (user.role === "customer") {
+      await notifyAdmins(
+        ["owner_admin", "support_admin", "admin", "super_admin"],
+        "New customer support reply",
+        `A customer sent a new reply on “${ticket.subject}”.`,
+        "admin_support",
+      );
+    } else {
+      await notifyCustomer(
+        ticket.user_id,
+        "Customer Service replied",
+        `There is a new reply on your support request “${ticket.subject}”.`,
+        "support_reply",
+        "/service",
+      );
+    }
     return json({ success: true });
   }
 
@@ -882,12 +1055,13 @@ async function route(request: Request): Promise<Response> {
     const result = await checked<any>(db.rpc("redeem_gift_code_atomic", {
       p_user_id: user.id, p_code: String(body.code || "").trim(),
     }));
+    await notifyCustomer(user.id, "Gift code redeemed", `Your gift code reward of ${Number(result.rewardAmount || result.reward_amount || 0).toFixed(2)} ETB was credited to your wallet.`, "gift_code", "/gift-codes");
     return json({ message: "Gift code redeemed successfully.", ...result });
   }
 
   if (p.startsWith("admin/")) {
     let allowed = ["owner_admin", "super_admin"];
-    if (/^admin\/(overview|deposits|withdrawals|payout-accounts|payout-change-requests|payment-methods|gift-codes)/.test(p)) {
+    if (/^admin\/(overview|deposits|withdrawals|payment-methods|gift-codes)/.test(p)) {
       allowed = ["owner_admin", "finance_admin", "admin", "super_admin"];
     } else if (p.startsWith("admin/tickets")) {
       allowed = ["owner_admin", "support_admin", "admin", "super_admin"];
@@ -901,7 +1075,7 @@ async function route(request: Request): Promise<Response> {
     const from=query.get("from")||"1970-01-01T00:00:00.000Z";
     const toInput=query.get("to"),to=toInput?toInput+"T23:59:59.999Z":"2999-12-31T23:59:59.999Z";
     const recent=new Date(Date.now()-15*60*1000).toISOString();
-    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,pendingAccounts,openTickets,unreadTickets]=await Promise.all([
+    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,openTickets,unreadTickets]=await Promise.all([
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("created_at",from).lte("created_at",to),
       db.from("sessions").select("user_id",{count:"exact",head:true}).gt("expires_at",nowIso()),
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("last_active_at",recent),
@@ -910,7 +1084,6 @@ async function route(request: Request): Promise<Response> {
       db.from("withdrawals").select("id,gross_amount",{count:"exact"}).eq("status","pending"),
       db.from("withdrawals").select("id,net_amount",{count:"exact"}).in("status",["approved","processed"]).gte("created_at",from).lte("created_at",to),
       db.from("withdrawals").select("id",{count:"exact",head:true}).eq("status","completed").gte("created_at",from).lte("created_at",to),
-      db.from("payout_accounts").select("id",{count:"exact",head:true}).eq("status","pending"),
       db.from("support_tickets").select("id",{count:"exact",head:true}).in("status",["open","in_progress"]),
       db.from("support_tickets").select("id",{count:"exact",head:true}).eq("is_read_by_admin",0),
     ]);
@@ -921,7 +1094,7 @@ async function route(request: Request): Promise<Response> {
       approvedDepositsTotal:sum(approvedDeposits.data||[],"amount"),
       pendingWithdrawalsCount:pendingWithdrawals.count||0,pendingWithdrawalsAmount:sum(pendingWithdrawals.data||[],"gross_amount"),
       approvedWithdrawalsTotal:sum(approvedWithdrawals.data||[],"net_amount"),
-      completedWithdrawalsCount:completedWithdrawals.count||0,pendingPayoutAccounts:pendingAccounts.count||0,
+      completedWithdrawalsCount:completedWithdrawals.count||0,
       unreadTickets:unreadTickets.count||0,openTickets:openTickets.count||0,
       verifiedSalesCount:approvedDeposits.count||0,verifiedSalesVolume:sum(approvedDeposits.data||[],"amount"),
     });
@@ -987,10 +1160,33 @@ async function route(request: Request): Promise<Response> {
 
   const adminDeposit = p.match(/^admin\/deposits\/([^/]+)\/(approve|reject)$/);
   if (adminDeposit && method === "POST") {
+    const depositId = decodeURIComponent(adminDeposit[1]);
+    const action = adminDeposit[2];
+    const deposit = await checked<any>(db.from("deposits").select("user_id,amount,tx_reference").eq("id", depositId).maybeSingle());
+    if (!deposit) throw new ApiError("Deposit request not found.", 404);
+    const reason = String(body.reason || "").trim();
     const result = await checked<any>(db.rpc("review_deposit_atomic", {
-      p_admin_user_id: user.id, p_deposit_id: decodeURIComponent(adminDeposit[1]),
-      p_action: adminDeposit[2], p_reason: String(body.reason || ""),
+      p_admin_user_id: user.id, p_deposit_id: depositId,
+      p_action: action, p_reason: reason,
     }));
+    const amountLabel = Number(deposit.amount).toFixed(2) + " ETB";
+    if (action === "approve") {
+      await notifyCustomer(
+        deposit.user_id,
+        "Deposit approved",
+        `Your deposit of ${amountLabel} was approved and credited to your wallet.`,
+        "deposit_approved",
+        "/recharge",
+      );
+    } else {
+      await notifyCustomer(
+        deposit.user_id,
+        "Deposit rejected",
+        `Your deposit of ${amountLabel} was rejected.${reason ? " Reason: " + reason : ""}`,
+        "deposit_rejected",
+        "/recharge",
+      );
+    }
     return json({ success: true, ...result });
   }
   if (p === "admin/withdrawals" && method === "GET") {
@@ -1002,75 +1198,50 @@ async function route(request: Request): Promise<Response> {
   const adminWithdrawal = p.match(/^admin\/withdrawals\/([^/]+)\/(approve|reject|complete)$/);
   if (adminWithdrawal && method === "POST") {
     const withdrawalId = decodeURIComponent(adminWithdrawal[1]);
+    const action = adminWithdrawal[2];
+    const withdrawal = await checked<any>(db.from("withdrawals").select("user_id,gross_amount,fee_amount,net_amount").eq("id", withdrawalId).maybeSingle());
+    if (!withdrawal) throw new ApiError("Withdrawal request not found.", 404);
+    const reason = String(body.reason || "").trim();
+    const bankReference = String(body.providerReference || body.bankTransferReference || body.reference || "").trim();
     let result: any;
-    if (adminWithdrawal[2] === "complete") {
+    if (action === "complete") {
       result = await checked<any>(db.rpc("complete_withdrawal_atomic", {
         p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
-        p_bank_transfer_reference: String(body.providerReference || body.bankTransferReference || body.reference || ""),
+        p_bank_transfer_reference: bankReference,
       }));
+      await notifyCustomer(
+        withdrawal.user_id,
+        "Withdrawal completed",
+        `Your withdrawal of ${Number(withdrawal.gross_amount).toFixed(2)} ETB is marked completed. Net amount: ${Number(withdrawal.net_amount).toFixed(2)} ETB. Bank reference: ${bankReference}.`,
+        "withdrawal_completed",
+        "/withdraw",
+      );
+    } else if (action === "approve") {
+      result = await checked<any>(db.rpc("review_withdrawal_atomic", {
+        p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
+        p_action: action, p_reason: reason,
+      }));
+      await notifyCustomer(
+        withdrawal.user_id,
+        "Withdrawal approved",
+        `Your withdrawal request for ${Number(withdrawal.gross_amount).toFixed(2)} ETB was approved. The bank transfer is still awaiting processing.`,
+        "withdrawal_approved",
+        "/withdraw",
+      );
     } else {
       result = await checked<any>(db.rpc("review_withdrawal_atomic", {
         p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
-        p_action: adminWithdrawal[2], p_reason: String(body.reason || ""),
+        p_action: action, p_reason: reason,
       }));
+      await notifyCustomer(
+        withdrawal.user_id,
+        "Withdrawal rejected",
+        `Your withdrawal request for ${Number(withdrawal.gross_amount).toFixed(2)} ETB was rejected. The reserved funds have been released.${reason ? " Reason: " + reason : ""}`,
+        "withdrawal_rejected",
+        "/withdraw",
+      );
     }
     return json({ success: true, ...result });
-  }
-  if (p === "admin/payout-accounts" && method === "GET") {
-    const [rows, changes, users] = await Promise.all([
-      checked<any[]>(db.from("payout_accounts").select("*").order("updated_at", { ascending: false })),
-      checked<any[]>(db.from("payout_change_requests").select("*").order("created_at", { ascending: false }).limit(300)),
-      checked<any[]>(db.from("users").select("id,full_name,nickname,phone")),
-    ]);
-    const byId = new Map(users.map((u: any) => [u.id, u]));
-    return json({
-      accounts: rows.map((a: any) => ({
-        ...payoutDto(a),
-        customerName: byId.get(a.user_id)?.nickname || byId.get(a.user_id)?.full_name || "Customer",
-        customerPhone: byId.get(a.user_id)?.phone || "",
-      })),
-      changeRequests: changes.map((r: any) => ({
-        id:r.id,userId:r.user_id,customerName:byId.get(r.user_id)?.nickname || byId.get(r.user_id)?.full_name || "Customer",
-        customerPhone:byId.get(r.user_id)?.phone || "",reason:r.reason,newMethodName:r.new_method_name,
-        newAccountNumber:r.new_account_number,newAccountOwnerName:r.new_account_owner_name,
-        status:r.status,adminNote:r.admin_note,createdAt:r.created_at,
-      })),
-    });
-  }
-
-  const payoutReview = p.match(/^admin\/payout-accounts\/([^/]+)\/review$/);
-  if (payoutReview && method === "POST") {
-    const id = decodeURIComponent(payoutReview[1]);
-    const status = String(body.status || "");
-    if (!["approved","rejected"].includes(status)) throw new ApiError("Invalid review status.", 400);
-    await checked(db.from("payout_accounts").update({
-      status, is_locked: status === "approved" ? 0 : 1,
-      review_note: String(body.note || body.reason || ""), reviewed_by: user.id, reviewed_at: nowIso(), updated_at: nowIso(),
-    }).eq("id", id));
-    return json({ success: true });
-  }
-  if (p === "admin/payout-change-requests" && method === "GET") {
-    const rows = await checked<any[]>(db.from("payout_change_requests").select("*").order("created_at", { ascending: false }).limit(300));
-    return json({ changeRequests: rows });
-  }
-  const changeReview = p.match(/^admin\/payout-change-requests\/([^/]+)\/review$/);
-  if (changeReview && method === "POST") {
-    const id = decodeURIComponent(changeReview[1]);
-    const item = await checked<any>(db.from("payout_change_requests").select("*").eq("id", id).maybeSingle());
-    if (!item) throw new ApiError("Change request not found.", 404);
-    const status = String(body.status || "");
-    if (!["approved","rejected"].includes(status)) throw new ApiError("Invalid review status.", 400);
-    if (status === "approved") {
-      await checked(db.from("payout_accounts").update({
-        method_name:item.new_method_name, account_number:item.new_account_number,
-        account_owner_name:item.new_account_owner_name, status:"approved", is_locked:0,
-        reviewed_by:user.id, reviewed_at:nowIso(), updated_at:nowIso(),
-      }).eq("user_id", item.user_id));
-    }
-    await checked(db.from("payout_change_requests").update({
-      status, admin_note:String(body.note || body.reason || ""), reviewed_by:user.id, reviewed_at:nowIso(),
-    }).eq("id", id));
-    return json({ success:true });
   }
   if (p === "admin/tickets" && method === "GET") {
     const tickets = await checked<any[]>(db.from("support_tickets").select("*").order("updated_at", { ascending: false }).limit(300));
@@ -1098,17 +1269,30 @@ async function route(request: Request): Promise<Response> {
     const ticketId = decodeURIComponent(adminTicketReply[1]);
     const message = String(body.message || "").trim();
     if (!message) throw new ApiError("Message cannot be empty.",400);
+    const ticket = await checked<any>(db.from("support_tickets").select("user_id,subject").eq("id", ticketId).maybeSingle());
+    if (!ticket) throw new ApiError("Support ticket not found.", 404);
     await checked(db.from("support_messages").insert({
       id:uuid("msg_"),ticket_id:ticketId,sender_id:user.id,sender_role:user.role,message,created_at:nowIso(),
     }));
     await checked(db.from("support_tickets").update({updated_at:nowIso(),is_read_by_admin:1,...(body.status && ["in_progress","resolved","closed","open"].includes(String(body.status)) ? {status:String(body.status)} : {})}).eq("id",ticketId));
+    await notifyCustomer(
+      ticket.user_id,
+      "Customer Service replied",
+      `A support agent replied to your request “${ticket.subject}”: ${message}`,
+      "support_reply",
+      "/service",
+    );
     return json({success:true});
   }
   const adminTicketStatus = p.match(/^admin\/tickets\/([^/]+)\/status$/);
   if (adminTicketStatus && method === "POST") {
     const status=String(body.status||"");
     if (!["open","in_progress","resolved","closed"].includes(status)) throw new ApiError("Invalid ticket status.",400);
-    await checked(db.from("support_tickets").update({status,updated_at:nowIso(),...(body.isRead!==undefined ? {is_read_by_admin:body.isRead?1:0} : {})}).eq("id",decodeURIComponent(adminTicketStatus[1])));
+    const ticketId=decodeURIComponent(adminTicketStatus[1]);
+    const ticket=await checked<any>(db.from("support_tickets").select("user_id,subject").eq("id",ticketId).maybeSingle());
+    if (!ticket) throw new ApiError("Support ticket not found.",404);
+    await checked(db.from("support_tickets").update({status,updated_at:nowIso(),...(body.isRead!==undefined ? {is_read_by_admin:body.isRead?1:0} : {})}).eq("id",ticketId));
+    await notifyCustomer(ticket.user_id, "Support request updated", `Your support request “${ticket.subject}” is now ${status.replace("_"," ")}.`, "support_status", "/service");
     return json({success:true});
   }
   if (p === "admin/gift-codes" && method === "GET") {

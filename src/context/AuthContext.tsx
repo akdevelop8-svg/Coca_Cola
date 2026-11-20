@@ -64,6 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshConfig, refreshAuth]);
 
+  // Keep the bell badge current for both customer and admin accounts.
+  useEffect(() => {
+    if (!user) return;
+    const intervalId = window.setInterval(() => {
+      void refreshAuth();
+    }, 30000);
+    return () => window.clearInterval(intervalId);
+  }, [user?.id, refreshAuth]);
+
   const setUserState = useCallback((nextUser: UserProfile | null, unread?: number) => {
     setUser(nextUser);
     if (typeof unread === 'number') setUnreadNotifications(unread);
