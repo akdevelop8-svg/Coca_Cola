@@ -473,6 +473,11 @@ async function route(request: Request): Promise<Response> {
       db.from("carousel_assets").select("*").eq("is_active", 1).order("sort_order"),
     ]);
     if (admins.error || methods.error || channels.error || assets.error) throw new ApiError("Unable to load platform configuration.", 503);
+    const publicSettings = app.financialOperationsEnabled ? app.settings : {
+      ...app.settings,
+      depositCbeAccountName: "",
+      depositCbeAccountNumber: "",
+    };
     return json({
       complianceApproved: app.financialOperationsEnabled,
       financialOperationsEnabled: app.financialOperationsEnabled,
@@ -480,8 +485,11 @@ async function route(request: Request): Promise<Response> {
       giftCodeEnabled: gift.data?.is_enabled === 1,
       publicSiteUrl: null,
       customDomainConfigured: false,
-      settings: app.settings,
-      activeDepositMethods: (methods.data || []).filter((m: any) => m.kind === "deposit").map(paymentMethodDto),
+      settings: publicSettings,
+      // Never publish a deposit destination while the deposit API rejects submissions.
+      activeDepositMethods: app.financialOperationsEnabled
+        ? (methods.data || []).filter((m: any) => m.kind === "deposit").map(paymentMethodDto)
+        : [],
       activePayoutMethods: (methods.data || []).filter((m: any) => m.kind === "payout").map(paymentMethodDto),
       supportChannels: (channels.data || []).map((c: any) => ({
         id: c.id, label: c.label, handleOrUrl: c.handle_or_url, href: c.href,
@@ -836,8 +844,11 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "payment-methods" && method === "GET") {
+    const app = await getAppSettings();
     const [depositMethods, payoutMethods] = await Promise.all([
-      checked<any[]>(db.from("payment_methods").select("*").eq("kind", "deposit").eq("is_active", 1).order("sort_order")),
+      app.financialOperationsEnabled
+        ? checked<any[]>(db.from("payment_methods").select("*").eq("kind", "deposit").eq("is_active", 1).order("sort_order"))
+        : Promise.resolve([] as any[]),
       checked<any[]>(db.from("payment_methods").select("*").eq("kind", "payout").eq("is_active", 1).order("sort_order")),
     ]);
     return json({

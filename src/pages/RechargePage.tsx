@@ -130,7 +130,9 @@ export function RechargePage() {
                   Deposit Funds {selectedMethod ? `(${selectedMethod.name})` : ''} · {displayName}
                 </h2>
                 <p className="text-xs text-white/85">
-                  Send to the verified account below, then submit your reference &amp; receipt
+                  {config?.financialOperationsEnabled
+                    ? 'Send to the verified account below, then submit your reference & receipt'
+                    : 'Deposits are currently disabled. Do not transfer funds.'}
                 </p>
               </div>
             </div>
@@ -173,8 +175,10 @@ export function RechargePage() {
                   )}
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-100 p-4 text-sm text-slate-600">
-                  No active deposit payment methods are currently enabled.
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+                  {config?.financialOperationsEnabled
+                    ? 'No active deposit payment methods are currently enabled.'
+                    : 'Deposits are currently disabled. Do not send money to any bank account. The deposit form will become available only after the platform enables financial operations.'}
                 </div>
               )}
 
