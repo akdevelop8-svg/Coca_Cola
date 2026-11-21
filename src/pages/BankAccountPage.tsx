@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Landmark, Save } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
-import type { PaymentMethodRecord, PayoutAccountRecord } from '../types';
+import type { PaymentMethodRecord, PayoutAccountRecord, PayoutChangeRequestRecord } from '../types';
 
 export function BankAccountPage() {
   const [account, setAccount] = useState<PayoutAccountRecord | null>(null);
+  const [changeRequests, setChangeRequests] = useState<PayoutChangeRequestRecord[]>([]);
   const [payoutMethods, setPayoutMethods] = useState<PaymentMethodRecord[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -20,16 +21,21 @@ export function BankAccountPage() {
     setError('');
     try {
       const [accountResult, methodResult] = await Promise.all([
-        apiFetch<{ account: PayoutAccountRecord | null }>('/api/payout-account'),
+        apiFetch<{ account: PayoutAccountRecord | null; changeRequests: PayoutChangeRequestRecord[] }>('/api/payout-account'),
         apiFetch<{ payoutMethods: PaymentMethodRecord[] }>('/api/payment-methods'),
       ]);
       setAccount(accountResult.account);
+      const requests = accountResult.changeRequests || [];
+      setChangeRequests(requests);
       setPayoutMethods(methodResult.payoutMethods || []);
       const methods = methodResult.payoutMethods || [];
-      const savedMethod = methods.find((method) => method.name === accountResult.account?.methodName);
+      const pendingRequest = requests.find((request) => request.status === 'pending');
+      const latestRequest = requests[0];
+      const methodName = pendingRequest?.newMethodName || accountResult.account?.methodName || latestRequest?.newMethodName;
+      const savedMethod = methods.find((method) => method.name === methodName);
       setSelectedMethodId(savedMethod?.id || methods[0]?.id || '');
-      setAccountNumber(accountResult.account?.accountNumber || '');
-      setAccountOwnerName(accountResult.account?.accountOwnerName || '');
+      setAccountNumber(pendingRequest?.newAccountNumber || accountResult.account?.accountNumber || latestRequest?.newAccountNumber || '');
+      setAccountOwnerName(pendingRequest?.newAccountOwnerName || accountResult.account?.accountOwnerName || latestRequest?.newAccountOwnerName || '');
     } catch (err: any) {
       setError(err?.message || 'Unable to load your payout account details right now.');
     } finally {
@@ -57,18 +63,22 @@ export function BankAccountPage() {
     }
     setSaving(true);
     try {
-      const result = await apiFetch<{ message: string; account: PayoutAccountRecord }>(
-        '/api/payout-account',
+      const result = await apiFetch<{ message: string }>(
+        account ? '/api/payout-account/change-request' : '/api/payout-account',
         {
-          method: account ? 'PUT' : 'POST',
-          body: JSON.stringify({
+          method: 'POST',
+          body: JSON.stringify(account ? {
+            newMethodId: selectedMethod.id,
+            newAccountNumber: accountNumber.trim(),
+            newAccountOwnerName: accountOwnerName.trim(),
+            reason: 'Customer requested a payout account change',
+          } : {
             methodId: selectedMethod.id,
             accountNumber: accountNumber.trim(),
             accountOwnerName: accountOwnerName.trim(),
           }),
         },
       );
-      setAccount(result.account);
       setMessage(result.message);
       await loadData();
     } catch (err: any) {
@@ -110,7 +120,7 @@ export function BankAccountPage() {
                   <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-2">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-xs font-bold uppercase">Saved · Ready for withdrawal</span>
+                      <span className="text-xs font-bold uppercase">Administrator approved · Ready for withdrawal</span>
                     </div>
                     <div className="flex justify-between gap-3 text-sm">
                       <span className="text-slate-600">Method</span>
@@ -125,8 +135,22 @@ export function BankAccountPage() {
                       <strong className="font-mono">{account.maskedAccountNumber}</strong>
                     </div>
                     <p className="text-xs text-emerald-800">
-                      This information stays in your account settings. Admin approval is not required. The saved account details are attached to a withdrawal request only when you submit one.
+                      This verified account remains active until an administrator approves a submitted change request.
                     </p>
+                  </div>
+                )}
+
+                {changeRequests.find((request) => request.status === 'pending') && (
+                  <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+                    <p className="font-bold">Bank account submission awaiting review</p>
+                    <p className="mt-1 text-xs">Your new account details will not be used for withdrawals until an administrator approves them. Your previous approved account remains active, if you have one.</p>
+                  </div>
+                )}
+
+                {!account && !changeRequests.some((request) => request.status === 'pending') && changeRequests[0]?.status === 'rejected' && (
+                  <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-sm text-red-900">
+                    <p className="font-bold">Your previous bank account submission was rejected.</p>
+                    {changeRequests[0].adminNote && <p className="mt-1 text-xs">Reason: {changeRequests[0].adminNote}</p>}
                   </div>
                 )}
 
@@ -152,6 +176,7 @@ export function BankAccountPage() {
                         id="payout-method"
                         value={selectedMethodId}
                         onChange={(event) => setSelectedMethodId(event.target.value)}
+                        disabled={Boolean(changeRequests.find((request) => request.status === 'pending'))}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white"
                       >
                         {payoutMethods.map((method) => (
@@ -177,6 +202,7 @@ export function BankAccountPage() {
                       autoComplete="name"
                       value={accountOwnerName}
                       onChange={(event) => setAccountOwnerName(event.target.value)}
+                      disabled={Boolean(changeRequests.find((request) => request.status === 'pending'))}
                       placeholder="Full name registered on your bank account"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
                       required
@@ -194,6 +220,7 @@ export function BankAccountPage() {
                       autoComplete="off"
                       value={accountNumber}
                       onChange={(event) => setAccountNumber(event.target.value)}
+                      disabled={Boolean(changeRequests.find((request) => request.status === 'pending'))}
                       placeholder="Enter your bank account number"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
                       required
@@ -202,11 +229,11 @@ export function BankAccountPage() {
 
                   <button
                     type="submit"
-                    disabled={saving || payoutMethods.length === 0}
+                    disabled={saving || payoutMethods.length === 0 || Boolean(changeRequests.find((request) => request.status === 'pending'))}
                     className="w-full py-3 rounded-full bg-[#D71920] text-white font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                   >
                     <Save className="w-4 h-4" />
-                    {saving ? 'Saving...' : account ? 'Update My Bank Account' : 'Save My Bank Account'}
+                    {saving ? 'Submitting...' : account ? 'Submit Bank Account Change for Approval' : 'Submit Bank Account for Approval'}
                   </button>
                 </form>
               </>
