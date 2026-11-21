@@ -172,11 +172,10 @@ export function OnboardingTermsPage() {
             </div>
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
               <p className="text-[11px] text-slate-500">Deposit Channel</p>
-              <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
-                {config?.activeDepositMethods?.[0]?.name || 'CBE'} ·{' '}
-                {config?.activeDepositMethods?.[0]?.accountNumber ||
-                  settings?.depositCbeAccountNumber ||
-                  '1000673029578'}
+              <p className="text-xs font-bold text-slate-900 mt-0.5">
+                {config?.financialOperationsEnabled && config.activeDepositMethods?.[0]
+                  ? `${config.activeDepositMethods[0].name} · ${config.activeDepositMethods[0].accountNumber}`
+                  : 'Currently unavailable — do not transfer funds'}
               </p>
             </div>
           </div>
@@ -199,10 +198,10 @@ export function OnboardingTermsPage() {
               calendar day. Up to {settings?.purchaseLimit ?? 2} active plans are permitted per account.
             </p>
             <p>
-              <strong>3. Verified Deposits &amp; Withdrawals:</strong> Real deposit submissions to{' '}
-              {config?.activeDepositMethods?.[0]?.accountNumber || settings?.depositCbeAccountNumber || '1000673029578'}{' '}
-              require unique transaction references and administrator verification. Wallet rewards are tracked in the platform ledger and remain subject to
-              withdrawn as cash.
+              <strong>3. Deposit &amp; Withdrawal Availability:</strong>{' '}
+              {config?.financialOperationsEnabled
+                ? 'Deposit submissions are subject to administrator verification. Withdrawals require administrator review and confirmation of the completed bank transfer.'
+                : 'Deposits and cash withdrawals are currently disabled. Do not transfer money to any bank account or treat wallet amounts as cash while this notice is displayed.'}
             </p>
             <p>
               <strong>4. Account Security:</strong> Logout remains accessible under My &gt; Logout (or the sidebar
