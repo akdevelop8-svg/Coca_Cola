@@ -1275,9 +1275,10 @@ async function route(request: Request): Promise<Response> {
       })),
     });
   }
-  const payoutReview = p.match(/^admin\\/payout-account-changes\\/([^/]+)\\/(approve|reject)$/);
-  if (payoutReview && method === "POST") {
-    const requestId = decodeURIComponent(payoutReview[1]);
+  const payoutReviewParts = p.split("/");
+  if (payoutReviewParts.length === 4 && payoutReviewParts[0] === "admin" && payoutReviewParts[1] === "payout-account-changes" && ["approve", "reject"].includes(payoutReviewParts[3]) && method === "POST") {
+    const requestId = decodeURIComponent(payoutReviewParts[2]);
+    const action = payoutReviewParts[3];
     const action = payoutReview[2];
     const pending = await checked<any>(db.from("payout_change_requests")
       .select("id,user_id,new_method_name,new_account_number").eq("id", requestId).maybeSingle());
