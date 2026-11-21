@@ -1078,7 +1078,7 @@ async function route(request: Request): Promise<Response> {
     const from=query.get("from")||"1970-01-01T00:00:00.000Z";
     const toInput=query.get("to"),to=toInput?toInput+"T23:59:59.999Z":"2999-12-31T23:59:59.999Z";
     const recent=new Date(Date.now()-15*60*1000).toISOString();
-    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,openTickets,unreadTickets]=await Promise.all([
+    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,openTickets,unreadTickets,capSetting,exposureResult]=await Promise.all([
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("created_at",from).lte("created_at",to),
       db.from("sessions").select("user_id",{count:"exact",head:true}).gt("expires_at",nowIso()),
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("last_active_at",recent),
@@ -1089,6 +1089,8 @@ async function route(request: Request): Promise<Response> {
       db.from("withdrawals").select("id",{count:"exact",head:true}).eq("status","completed").gte("created_at",from).lte("created_at",to),
       db.from("support_tickets").select("id",{count:"exact",head:true}).in("status",["open","in_progress"]),
       db.from("support_tickets").select("id",{count:"exact",head:true}).eq("is_read_by_admin",0),
+      db.from("app_settings").select("value").eq("key","global_exposure_cap_etb").maybeSingle(),
+      db.rpc("current_global_financial_exposure_etb"),
     ]);
     const sum=(rows:any[],key:string)=>round2((rows||[]).reduce((n:number,x:any)=>n+Number(x[key]||0),0));
     return json({
@@ -1100,6 +1102,10 @@ async function route(request: Request): Promise<Response> {
       completedWithdrawalsCount:completedWithdrawals.count||0,
       unreadTickets:unreadTickets.count||0,openTickets:openTickets.count||0,
       verifiedSalesCount:approvedDeposits.count||0,verifiedSalesVolume:sum(approvedDeposits.data||[],"amount"),
+      globalExposureCapEtb: capSetting.error ? null : Number(capSetting.data?.value ?? 0),
+      currentFinancialExposureEtb: exposureResult.error ? null : Number(exposureResult.data ?? 0),
+      remainingFinancialExposureEtb: capSetting.error || exposureResult.error ? null :
+        Math.max(0, Number(capSetting.data?.value ?? 0) - Number(exposureResult.data ?? 0)),
     });
   }
 
