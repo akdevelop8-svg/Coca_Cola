@@ -291,7 +291,9 @@ export function AdminDashboardPage() {
           bankTransferReference: completionRef.trim(),
         }),
       });
-      setStatusMsg(`Withdrawal marked as ${completionModal.targetStatus} and customer notified.`);
+      setStatusMsg(completionModal.targetStatus === 'processed'
+        ? 'Withdrawal marked as processed. Funds remain reserved until final completion is confirmed.'
+        : 'Withdrawal completed after the bank transfer was confirmed.');
       setCompletionModal(null);
       setCompletionRef('');
       await loadTab('withdrawals');
@@ -2219,7 +2221,9 @@ export function AdminDashboardPage() {
               Mark Withdrawal as {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
             </h3>
             <p className="text-xs text-slate-600">
-              Make the bank transfer manually first, then enter the bank transaction short code (reference). No receipt upload is required. Funds remain reserved until you mark the transfer completed.
+              {completionModal.targetStatus === 'processed'
+                ? 'Use this when the manual bank transfer has been initiated and is being processed. Enter its bank reference. Funds remain reserved and the withdrawal is not completed yet.'
+                : 'Use this only after the bank confirms the transfer succeeded. Enter the final bank reference. This releases the reserved amount and records the withdrawal as completed.'}
             </p>
             <input
               type="text"
