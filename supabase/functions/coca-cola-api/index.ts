@@ -418,11 +418,6 @@ const payoutDto = (a: any) => a ? ({
   status: a.status, isLocked: a.is_locked === 1, reviewNote: a.review_note,
   updatedAt: a.updated_at,
 }) : null;
-const payoutChangeRequestDto = (r: any) => ({
-  id: r.id, userId: r.user_id, reason: r.reason, newMethodName: r.new_method_name,
-  newAccountNumber: r.new_account_number, newAccountOwnerName: r.new_account_owner_name,
-  status: r.status, adminNote: r.admin_note ?? null, createdAt: r.created_at,
-});
 const depositDto = (d: any) => ({
   id: d.id, userId: d.user_id, paymentMethodId: d.payment_method_id,
   methodName: d.method_name, accountNumberSnapshot: d.account_number_snapshot,
@@ -891,15 +886,10 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "payout-account" && method === "GET") {
-    const [account, changeRequests] = await Promise.all([
-      checked<any>(db.from("payout_accounts").select("*").eq("user_id", user.id).maybeSingle()),
-      checked<any[]>(db.from("payout_change_requests").select("*").eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(100)),
-    ]);
-    return json({
-      account: payoutDto(account),
-      changeRequests: changeRequests.map(payoutChangeRequestDto),
-    });
+    const account = await checked<any>(
+      db.from("payout_accounts").select("*").eq("user_id", user.id).maybeSingle(),
+    );
+    return json({ account: payoutDto(account) });
   }
   if (p === "payout-account" && method === "POST") {
     const methodId = String(body.methodId || "").trim();
@@ -908,71 +898,65 @@ async function route(request: Request): Promise<Response> {
     if (!methodId || accountNumber.length < 5 || !ownerName) {
       throw new ApiError("Select a payout method and enter the account number and account owner.", 400);
     }
-    const existing = await checked<any>(db.from("payout_accounts").select("id").eq("user_id", user.id).maybeSingle());
-    if (existing) {
-      throw new ApiError("A payout account already exists. Submit a bank account change request for administrator review.", 409);
+
+    const selectedMethod = await checked<any>(
+      db.from("payment_methods").select("name")
+        .eq("id", methodId).eq("kind", "payout").eq("is_active", 1).maybeSingle(),
+    );
+    if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
+
+    const existing = await checked<any>(
+      db.from("payout_accounts").select("id").eq("user_id", user.id).maybeSingle(),
+    );
+    const accountValues = {
+      method_name: selectedMethod.name,
+      account_number: accountNumber,
+      account_owner_name: ownerName,
+      // "approved" is the internal eligibility state used by the withdrawal RPC.
+      // It is not an administrator verification or approval.
+      status: "approved",
+      is_locked: 0,
+      review_note: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      updated_at: nowIso(),
+    };
+
+    let row: any;
+    let created = false;
+    if (existing?.id) {
+      row = await checked<any>(
+        db.from("payout_accounts").update(accountValues)
+          .eq("user_id", user.id).select("*").single(),
+      );
+    } else {
+      try {
+        row = await checked<any>(
+          db.from("payout_accounts").insert({
+            id: uuid("pay_"),
+            user_id: user.id,
+            ...accountValues,
+          }).select("*").single(),
+        );
+        created = true;
+      } catch (insertError) {
+        // A repeated save can race with the first request; update the account that won.
+        const concurrent = await checked<any>(
+          db.from("payout_accounts").select("id").eq("user_id", user.id).maybeSingle(),
+        );
+        if (!concurrent?.id) throw insertError;
+        row = await checked<any>(
+          db.from("payout_accounts").update(accountValues)
+            .eq("user_id", user.id).select("*").single(),
+        );
+      }
     }
-    const pending = await checked<any>(db.from("payout_change_requests").select("id")
-      .eq("user_id", user.id).eq("status", "pending").limit(1).maybeSingle());
-    if (pending) throw new ApiError("Your bank account submission is already awaiting administrator review.", 409);
-    const selectedMethod = await checked<any>(db.from("payment_methods").select("name")
-      .eq("id", methodId).eq("kind", "payout").eq("is_active", 1).maybeSingle());
-    if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
-    const row = await checked<any>(db.from("payout_change_requests").insert({
-      id: uuid("pcr_"), user_id: user.id, reason: "Initial payout account registration",
-      new_method_name: selectedMethod.name, new_account_number: accountNumber,
-      new_account_owner_name: ownerName, status: "pending", created_at: nowIso(),
-    }).select("*").single());
-    await notifyAdmins(
-      ["owner_admin", "finance_admin", "admin", "super_admin"],
-      "New bank account verification request",
-      "A customer submitted an initial payout account for administrator verification.",
-      "payout_account_review",
-    );
-    await notifyCustomer(
-      user.id,
-      "Bank account submitted for review",
-      `${selectedMethod.name} account ending ${accountNumber.slice(-4)} is awaiting administrator approval and cannot be used for withdrawals yet.`,
-      "payout_account_pending",
-      "/my/bank-account",
-    );
+
     return json({
-      message: "Bank account submitted. It will be available for withdrawals after administrator approval.",
-      request: payoutChangeRequestDto(row),
-    }, 201);
-  }
-  if (p === "payout-account/change-request" && method === "POST") {
-    const reason = String(body.reason || "").trim();
-    const newMethodId = String(body.newMethodId || "").trim();
-    const number = String(body.newAccountNumber || "").trim();
-    const ownerName = String(body.newAccountOwnerName || "").trim();
-    if (!reason || !newMethodId || number.length < 5 || !ownerName) throw new ApiError("Select a payout method and complete all bank account change details.", 400);
-    const existing = await checked<any>(db.from("payout_accounts").select("id").eq("user_id", user.id).maybeSingle());
-    if (!existing) throw new ApiError("Submit your first payout account before requesting a change.", 409);
-    const pending = await checked<any>(db.from("payout_change_requests").select("id")
-      .eq("user_id", user.id).eq("status", "pending").limit(1).maybeSingle());
-    if (pending) throw new ApiError("Your bank account change request is already awaiting administrator review.", 409);
-    const selectedMethod = await checked<any>(db.from("payment_methods").select("name")
-      .eq("id", newMethodId).eq("kind", "payout").eq("is_active", 1).maybeSingle());
-    if (!selectedMethod) throw new ApiError("Selected payout method is unavailable.", 400);
-    const row = await checked<any>(db.from("payout_change_requests").insert({
-      id: uuid("pcr_"), user_id: user.id, reason, new_method_name: selectedMethod.name,
-      new_account_number: number, new_account_owner_name: ownerName, status: "pending", created_at: nowIso(),
-    }).select("*").single());
-    await notifyAdmins(
-      ["owner_admin", "finance_admin", "admin", "super_admin"],
-      "Bank account change requires review",
-      "A customer requested a change to their payout account. Review the submitted details before approving.",
-      "payout_account_review",
-    );
-    await notifyCustomer(
-      user.id,
-      "Bank account change submitted",
-      "Your new payout account details are awaiting administrator approval. Your previously approved account remains active until the change is approved.",
-      "payout_account_change_pending",
-      "/my/bank-account",
-    );
-    return json({ message: "Bank account change submitted for administrator review.", request: payoutChangeRequestDto(row) }, 201);
+      message: created ? "Your payout account was saved and is ready for withdrawals."
+        : "Your payout account was updated and is ready for withdrawals.",
+      account: payoutDto(row),
+    }, created ? 201 : 200);
   }
 
   if (p === "withdrawals" && method === "GET") {
@@ -1108,7 +1092,7 @@ async function route(request: Request): Promise<Response> {
 
   if (p.startsWith("admin/")) {
     let allowed = ["owner_admin", "super_admin"];
-    if (/^admin\/(overview|deposits|withdrawals|payout-account-changes|payment-methods|gift-codes)/.test(p)) {
+    if (/^admin\/(overview|deposits|withdrawals|payment-methods|gift-codes)/.test(p)) {
       allowed = ["owner_admin", "finance_admin", "admin", "super_admin"];
     } else if (p.startsWith("admin/tickets")) {
       allowed = ["owner_admin", "support_admin", "admin", "super_admin"];
@@ -1247,47 +1231,6 @@ async function route(request: Request): Promise<Response> {
     const customers = await checked<any[]>(db.from("users").select("id,full_name,phone").in("id", [...new Set(rows.map((w: any) => w.user_id))]));
     const map = new Map(customers.map((x: any) => [x.id, x]));
     return json({ withdrawals: rows.map((w: any) => ({ ...withdrawalDto(w), customerName: map.get(w.user_id)?.full_name, customerPhone: map.get(w.user_id)?.phone })) });
-  }
-  if (p === "admin/payout-account-changes" && method === "GET") {
-    const requests = await checked<any[]>(db.from("payout_change_requests")
-      .select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(300));
-    const userIds = [...new Set(requests.map((r: any) => r.user_id))];
-    const customers = userIds.length
-      ? await checked<any[]>(db.from("users").select("id,full_name,phone").in("id", userIds))
-      : [];
-    const byId = new Map(customers.map((x: any) => [x.id, x]));
-    return json({
-      requests: requests.map((r: any) => ({
-        ...payoutChangeRequestDto(r),
-        customerName: byId.get(r.user_id)?.full_name || "Customer",
-        customerPhone: byId.get(r.user_id)?.phone || "",
-      })),
-    });
-  }
-  const payoutReviewParts = p.split("/");
-  if (payoutReviewParts.length === 4 && payoutReviewParts[0] === "admin" && payoutReviewParts[1] === "payout-account-changes" && ["approve", "reject"].includes(payoutReviewParts[3]) && method === "POST") {
-    const requestId = decodeURIComponent(payoutReviewParts[2]);
-    const action = payoutReviewParts[3];
-    const pending = await checked<any>(db.from("payout_change_requests")
-      .select("id,user_id,new_method_name,new_account_number").eq("id", requestId).maybeSingle());
-    if (!pending) throw new ApiError("Payout account review request not found.", 404);
-    const adminNote = String(body.adminNote || body.note || "").trim();
-    const result = await checked<any>(db.rpc("review_payout_account_change_atomic", {
-      p_admin_user_id: user.id,
-      p_request_id: requestId,
-      p_action: action,
-      p_admin_note: adminNote || null,
-    }), 403);
-    await notifyCustomer(
-      pending.user_id,
-      action === "approve" ? "Payout account approved" : "Payout account change rejected",
-      action === "approve"
-        ? `${pending.new_method_name} account ending ${String(pending.new_account_number).slice(-4)} is now approved for future withdrawals.`
-        : `Your payout account submission was rejected. ${adminNote}`,
-      action === "approve" ? "payout_account_approved" : "payout_account_rejected",
-      "/my/bank-account",
-    );
-    return json({ success: true, ...result });
   }
   const adminWithdrawal = p.match(/^admin\/withdrawals\/([^/]+)\/(approve|reject|complete)$/);
   if (adminWithdrawal && method === "POST") {
