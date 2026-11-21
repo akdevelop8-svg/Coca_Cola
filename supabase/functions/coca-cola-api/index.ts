@@ -31,6 +31,36 @@ const ethiopiaDate = () =>
   }).format(new Date());
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 const uuid = (prefix: string) => prefix + crypto.randomUUID();
+async function loginRateKey(scope: string, value: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(SERVICE_KEY),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${scope}:${value}`),
+  );
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+async function consumeLoginLimit(keyHash: string, maxAttempts: number) {
+  const rows = await checked<any[]>(
+    db.rpc("consume_login_rate_limit", {
+      p_key_hash: keyHash,
+      p_max_attempts: maxAttempts,
+      p_window_seconds: 900,
+      p_block_seconds: 900,
+    }),
+    503,
+  );
+  const result = Array.isArray(rows) ? rows[0] : null;
+  if (!result?.allowed) {
+    throw new ApiError("Too many login attempts. Please wait 15 minutes and try again.", 429);
+  }
+}
 const maskAccount = (value: string) => {
   const digits = String(value || "").replace(/\s/g, "");
   return digits.length <= 4 ? digits : "•••• •••• " + digits.slice(-4);
@@ -72,6 +102,7 @@ const defaultSettings = {
   depositCbeAccountName: "CBE (Commercial Bank of Ethiopia)",
   depositCbeAccountNumber: "1000673029578",
   withdrawalMethodOnly: "CBE (Commercial Bank of Ethiopia)",
+  privacyPolicyUrl: "",
   maintenanceMode: false,
 };
 const companyInfo = {
@@ -91,6 +122,8 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
     if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
+    if (message.includes("MAKER_CHECKER_REQUIRED")) throw new ApiError("Withdrawal completion is not available under the current administrator policy.", 403);
+    if (message.includes("WITHDRAWAL_REVIEWER_REQUIRED")) throw new ApiError("This withdrawal must be approved before completion.", 409);
     if (message.includes("INSUFFICIENT_AVAILABLE_BALANCE")) throw new ApiError("Your available wallet balance is insufficient.", 400);
     if (message.includes("PAYOUT_ACCOUNT_NOT_APPROVED")) throw new ApiError("Your bank account must be approved before withdrawing.", 400);
     if (message.includes("MINIMUM_WITHDRAWAL_IS_150_ETB")) throw new ApiError("Minimum withdrawal is 150 ETB.", 400);
@@ -570,13 +603,28 @@ async function route(request: Request): Promise<Response> {
   if (p === "auth/login" && method === "POST") {
     const identifier = String(body.identifier || body.phone || "").trim();
     const isPhoneIdentifier = isPhone(identifier) || /^09\d{8}$/.test(identifier) || /^2519\d{8}$/.test(identifier);
+    const normalizedIdentifier = isPhoneIdentifier
+      ? normalizePhone(identifier)
+      : identifier.toLowerCase();
+    const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || request.headers.get("x-real-ip")
+      || "unknown";
+    const identityKey = await loginRateKey("identity", normalizedIdentifier || "empty");
+    const ipKey = await loginRateKey("ip", forwardedIp);
+    await consumeLoginLimit(identityKey, 5);
+    await consumeLoginLimit(ipKey, 30);
+
     let result: any;
-    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizePhone(identifier)).maybeSingle();
-    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", identifier.toLowerCase()).maybeSingle();
+    if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizedIdentifier).maybeSingle();
+    else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", normalizedIdentifier).maybeSingle();
     else result = await db.from("users").select("*").ilike("username", identifier).maybeSingle();
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
+    // Reset the successfully authenticated identity bucket only.
+    // Keep the shared IP bucket intact so one valid account cannot reset
+    // the IP-wide brute-force protection for other customer accounts.
+    await checked(db.rpc("clear_login_rate_limit", { p_key_hash: identityKey }), 503);
     await checked(db.from("users").update({ last_active_at: nowIso() }).eq("id", result.data.id));
     const token = await createSession(result.data.id);
     const [user, unreadNotifications] = await Promise.all([profileFor(result.data), unreadCount(result.data.id)]);
@@ -1030,7 +1078,7 @@ async function route(request: Request): Promise<Response> {
     const from=query.get("from")||"1970-01-01T00:00:00.000Z";
     const toInput=query.get("to"),to=toInput?toInput+"T23:59:59.999Z":"2999-12-31T23:59:59.999Z";
     const recent=new Date(Date.now()-15*60*1000).toISOString();
-    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,openTickets,unreadTickets]=await Promise.all([
+    const [users,sessions,recentUsers,pendingDeposits,approvedDeposits,pendingWithdrawals,approvedWithdrawals,completedWithdrawals,openTickets,unreadTickets,capSetting,exposureResult]=await Promise.all([
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("created_at",from).lte("created_at",to),
       db.from("sessions").select("user_id",{count:"exact",head:true}).gt("expires_at",nowIso()),
       db.from("users").select("id",{count:"exact",head:true}).eq("role","customer").gte("last_active_at",recent),
@@ -1041,6 +1089,8 @@ async function route(request: Request): Promise<Response> {
       db.from("withdrawals").select("id",{count:"exact",head:true}).eq("status","completed").gte("created_at",from).lte("created_at",to),
       db.from("support_tickets").select("id",{count:"exact",head:true}).in("status",["open","in_progress"]),
       db.from("support_tickets").select("id",{count:"exact",head:true}).eq("is_read_by_admin",0),
+      db.from("app_settings").select("value").eq("key","global_exposure_cap_etb").maybeSingle(),
+      db.rpc("current_global_financial_exposure_etb"),
     ]);
     const sum=(rows:any[],key:string)=>round2((rows||[]).reduce((n:number,x:any)=>n+Number(x[key]||0),0));
     return json({
@@ -1052,6 +1102,10 @@ async function route(request: Request): Promise<Response> {
       completedWithdrawalsCount:completedWithdrawals.count||0,
       unreadTickets:unreadTickets.count||0,openTickets:openTickets.count||0,
       verifiedSalesCount:approvedDeposits.count||0,verifiedSalesVolume:sum(approvedDeposits.data||[],"amount"),
+      globalExposureCapEtb: capSetting.error ? null : Number(capSetting.data?.value ?? 0),
+      currentFinancialExposureEtb: exposureResult.error ? null : Number(exposureResult.data ?? 0),
+      remainingFinancialExposureEtb: capSetting.error || exposureResult.error ? null :
+        Math.max(0, Number(capSetting.data?.value ?? 0) - Number(exposureResult.data ?? 0)),
     });
   }
 
@@ -1154,12 +1208,13 @@ async function route(request: Request): Promise<Response> {
   if (adminWithdrawal && method === "POST") {
     const withdrawalId = decodeURIComponent(adminWithdrawal[1]);
     const action = adminWithdrawal[2];
-    const withdrawal = await checked<any>(db.from("withdrawals").select("user_id,gross_amount,fee_amount,net_amount").eq("id", withdrawalId).maybeSingle());
+    const withdrawal = await checked<any>(db.from("withdrawals").select("user_id,gross_amount,fee_amount,net_amount,reviewed_by").eq("id", withdrawalId).maybeSingle());
     if (!withdrawal) throw new ApiError("Withdrawal request not found.", 404);
     const reason = String(body.reason || "").trim();
     const bankReference = String(body.providerReference || body.bankTransferReference || body.reference || "").trim();
     let result: any;
     if (action === "complete") {
+      if (!withdrawal.reviewed_by) throw new ApiError("This withdrawal must be approved before completion.", 409);
       result = await checked<any>(db.rpc("complete_withdrawal_atomic", {
         p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
         p_bank_transfer_reference: bankReference,
@@ -1388,6 +1443,20 @@ async function route(request: Request): Promise<Response> {
     const normalizedChanges=Object.entries(changes).map(([key,value])=>[
       key==="promotionalRewardsEnabled" ? "promotional_rewards_enabled" : key, value,
     ]);
+    const privacyPolicyChange=normalizedChanges.find(([key])=>key==="privacyPolicyUrl");
+    if(privacyPolicyChange){
+      const candidate=String(privacyPolicyChange[1]??"").trim();
+      if(candidate){
+        let parsed:URL;
+        try{parsed=new URL(candidate);}catch{throw new ApiError("Privacy Policy URL must be a valid HTTPS link.",400);}
+        if(parsed.protocol!=="https:"||!parsed.hostname||parsed.username||parsed.password){
+          throw new ApiError("Privacy Policy URL must be a valid HTTPS link without embedded credentials.",400);
+        }
+        privacyPolicyChange[1]=parsed.toString();
+      }else{
+        privacyPolicyChange[1]="";
+      }
+    }
     const rows=normalizedChanges.filter(([k,v])=>allowed.has(String(k))&&v!==undefined).map(([key,value])=>({
       key,value:String(value),updated_at:nowIso(),
     }));
