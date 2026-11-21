@@ -4,7 +4,6 @@ import {
   Clock,
   CreditCard,
   FileText,
-  Landmark,
   MessageSquare,
   ShieldAlert,
   Users,
@@ -306,27 +305,6 @@ export function CustomerDetailModal({
               {/* Section 3: Deposits, Withdrawals, Saved Payout Account */}
               {section === 'finance' && (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800 mb-2">
-                      <Landmark className="w-4 h-4 text-[#D71920]" />
-                      <span>Saved Payout Account</span>
-                    </div>
-                    {profile.payoutAccount ? (
-                      <div className="text-xs space-y-1">
-                        <p>
-                          <strong>{profile.payoutAccount.methodName}</strong> ·{' '}
-                          <span className="font-mono">{profile.payoutAccount.accountNumber}</span>
-                        </p>
-                        <p className="text-slate-600">
-                          Holder: {profile.payoutAccount.accountOwnerName} · Status:{' '}
-                          <strong className="uppercase">{profile.payoutAccount.status}</strong>
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500">No payout account saved.</p>
-                    )}
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
                       <h4 className="text-xs font-bold uppercase text-slate-700">Deposit Requests</h4>
