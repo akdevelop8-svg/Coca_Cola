@@ -970,7 +970,7 @@ async function route(request: Request): Promise<Response> {
     }, created ? 201 : 200);
   }
 
-"withdrawals" && method === "POST") {
+if (p === "withdrawals" && method === "POST") {
     const result = await checked<any>(db.rpc("request_withdrawal_atomic", {
       p_user_id: user.id, p_idempotency_key: String(body.idempotencyKey || crypto.randomUUID()),
       p_gross_amount: Number(body.amount),
