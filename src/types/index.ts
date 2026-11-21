@@ -325,6 +325,7 @@ export interface CarouselAsset {
 
 export interface PlatformConfig {
   complianceApproved: boolean;
+  financialOperationsEnabled: boolean;
   adminSetupRequired: boolean;
   giftCodeEnabled: boolean;
   publicSiteUrl: string | null;
