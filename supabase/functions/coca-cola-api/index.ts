@@ -119,6 +119,10 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
   const result = await promise;
   if (result.error) {
     const message = String(result.error.message || "Database operation failed.");
+    const errorContext = [message, result.error.details, result.error.hint].filter(Boolean).join(" ");
+    if (errorContext.includes("idx_deposits_unique_active_reference")) {
+      throw new ApiError("This transaction reference has already been used for this payment method. Please enter the unique reference for a new bank transfer.", 409);
+    }
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
     if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
@@ -847,15 +851,45 @@ async function route(request: Request): Promise<Response> {
     if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(receipt.type) || receipt.size > 5 * 1024 * 1024) {
       throw new ApiError("Receipt must be JPG, PNG, WEBP, or PDF up to 5 MB.", 400);
     }
+
+    // Give the customer a clear duplicate-reference message before storing an unnecessary receipt.
+    // The database unique index remains the final concurrency-safe guard.
+    const referencePattern = txReference.replace(/[%_\\]/g, (char) => "\\" + char);
+    const existingReference = await checked<any>(
+      db.from("deposits")
+        .select("id")
+        .eq("payment_method_id", methodId)
+        .ilike("tx_reference", referencePattern)
+        .neq("status", "rejected")
+        .limit(1)
+        .maybeSingle(),
+    );
+    if (existingReference) {
+      throw new ApiError("This transaction reference has already been used for this payment method. Please enter the unique reference for a new bank transfer.", 409);
+    }
+
     const ext = receipt.type === "application/pdf" ? "pdf" : receipt.type.split("/")[1];
     const filePath = "deposits/" + user.id + "/" + crypto.randomUUID() + "." + ext;
     await checked(db.storage.from("platform-uploads").upload(filePath, receipt, { contentType: receipt.type, upsert: false }));
-    const row = await checked<any>(db.from("deposits").insert({
-      id: uuid("dep_"), user_id: user.id, payment_method_id: methodId,
-      method_name: paymentMethod.name, account_number_snapshot: paymentMethod.account_number,
-      amount: round2(amount), tx_reference: txReference, receipt_path: filePath,
-      receipt_mime: receipt.type, status: "pending", created_at: nowIso(),
-    }).select("*").single());
+
+    let row: any;
+    try {
+      row = await checked<any>(db.from("deposits").insert({
+        id: uuid("dep_"), user_id: user.id, payment_method_id: methodId,
+        method_name: paymentMethod.name, account_number_snapshot: paymentMethod.account_number,
+        amount: round2(amount), tx_reference: txReference, receipt_path: filePath,
+        receipt_mime: receipt.type, status: "pending", created_at: nowIso(),
+      }).select("*").single());
+    } catch (error) {
+      // Remove the uploaded receipt if a concurrent request wins the unique-reference race.
+      try {
+        const cleanup = await db.storage.from("platform-uploads").remove([filePath]);
+        if (cleanup.error) console.error("Failed to remove unused deposit receipt:", cleanup.error.message);
+      } catch (cleanupError) {
+        console.error("Failed to remove unused deposit receipt:", cleanupError instanceof Error ? cleanupError.message : "Unknown storage cleanup error");
+      }
+      throw error;
+    }
     const amountLabel = round2(amount).toFixed(2) + " ETB";
     await notifyCustomer(user.id, "Deposit request received", `Your deposit request for ${amountLabel} was submitted and is awaiting review.`, "deposit_submitted", "/recharge");
     await notifyAdmins(

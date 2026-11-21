@@ -228,11 +228,12 @@ export function RechargePage() {
 
               <div>
                 <label htmlFor="deposit-ref" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Transaction Reference / Short Code
+                  Transaction Reference / Short Code (unique per transfer)
                 </label>
                 <input
                   id="deposit-ref"
                   type="text"
+                  autoComplete="off"
                   value={txReference}
                   onChange={(e) => setTxReference(e.target.value)}
                   placeholder="Enter CBE reference / FT code (e.g. FT26320XYZ)"
