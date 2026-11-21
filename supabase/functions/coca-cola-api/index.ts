@@ -1310,18 +1310,35 @@ async function route(request: Request): Promise<Response> {
     const bankReference = String(body.providerReference || body.bankTransferReference || body.reference || "").trim();
     let result: any;
     if (action === "complete") {
-      if (!withdrawal.reviewed_by) throw new ApiError("This withdrawal must be approved before completion.", 409);
-      result = await checked<any>(db.rpc("complete_withdrawal_atomic", {
-        p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
-        p_bank_transfer_reference: bankReference,
-      }));
-      await notifyCustomer(
-        withdrawal.user_id,
-        "Withdrawal completed",
-        `Your withdrawal of ${Number(withdrawal.gross_amount).toFixed(2)} ETB is marked completed. Net amount: ${Number(withdrawal.net_amount).toFixed(2)} ETB. Bank reference: ${bankReference}.`,
-        "withdrawal_completed",
-        "/withdraw",
-      );
+      if (!withdrawal.reviewed_by) throw new ApiError("This withdrawal must be approved before processing or completion.", 409);
+      const targetStatus = String(body.status || "completed");
+      if (targetStatus === "processed") {
+        result = await checked<any>(db.rpc("process_withdrawal_atomic", {
+          p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
+          p_bank_transfer_reference: bankReference,
+        }));
+        await notifyCustomer(
+          withdrawal.user_id,
+          "Withdrawal processing started",
+          `Your withdrawal of ${Number(withdrawal.gross_amount).toFixed(2)} ETB is being processed. Net amount: ${Number(withdrawal.net_amount).toFixed(2)} ETB. Bank reference: ${bankReference}. Funds remain reserved until final completion is confirmed.`,
+          "withdrawal_processed",
+          "/withdraw",
+        );
+      } else if (targetStatus === "completed") {
+        result = await checked<any>(db.rpc("complete_withdrawal_atomic", {
+          p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
+          p_bank_transfer_reference: bankReference,
+        }));
+        await notifyCustomer(
+          withdrawal.user_id,
+          "Withdrawal completed",
+          `Your withdrawal of ${Number(withdrawal.gross_amount).toFixed(2)} ETB is marked completed. Net amount: ${Number(withdrawal.net_amount).toFixed(2)} ETB. Bank reference: ${bankReference}.`,
+          "withdrawal_completed",
+          "/withdraw",
+        );
+      } else {
+        throw new ApiError("Invalid withdrawal processing status.", 400);
+      }
     } else if (action === "approve") {
       result = await checked<any>(db.rpc("review_withdrawal_atomic", {
         p_admin_user_id: user.id, p_withdrawal_id: withdrawalId,
