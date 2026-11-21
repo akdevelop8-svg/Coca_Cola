@@ -1103,11 +1103,17 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "gift-codes" && method === "GET") {
-    const rows = await checked<any[]>(db.from("gift_code_redemptions").select("*").eq("user_id", user.id).order("redeemed_at", { ascending: false }));
-    return json({ redemptions: rows.map((x: any) => ({
-      id: x.id, giftCodeId: x.gift_code_id, code: x.code_snapshot,
-      rewardAmount: Number(x.reward_amount), redeemedAt: x.redeemed_at,
-    })) });
+    const [rows, setting] = await Promise.all([
+      checked<any[]>(db.from("gift_code_redemptions").select("*").eq("user_id", user.id).order("redeemed_at", { ascending: false })),
+      checked<any>(db.from("gift_code_settings").select("is_enabled").eq("id", "default").maybeSingle()),
+    ]);
+    return json({
+      giftCodeEnabled: setting?.is_enabled === 1,
+      redemptions: rows.map((x: any) => ({
+        id: x.id, giftCodeId: x.gift_code_id, code: x.code_snapshot,
+        rewardAmount: Number(x.reward_amount), redeemedAt: x.redeemed_at,
+      })),
+    });
   }
   if (p === "gift-codes/redeem" && method === "POST") {
     const result = await checked<any>(db.rpc("redeem_gift_code_atomic", {
