@@ -755,6 +755,44 @@ export function AdminDashboardPage() {
                 </div>
               ))}
             </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Global Financial Exposure Control</h3>
+                  <p className="text-xs text-slate-500">Posted wallet balances plus remaining daily obligations on active plans.</p>
+                </div>
+                <span className="rounded-full px-3 py-1 text-[11px] font-bold bg-amber-100 text-amber-800">
+                  Financial operations remain controlled by the server
+                </span>
+              </div>
+              {overview.globalExposureCapEtb != null && overview.currentFinancialExposureEtb != null ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Maximum Exposure</p>
+                      <p className="text-lg font-extrabold tabular-nums mt-1">{formatBrExact(overview.globalExposureCapEtb)}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Current Exposure</p>
+                      <p className="text-lg font-extrabold tabular-nums mt-1">{formatBrExact(overview.currentFinancialExposureEtb)}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Remaining Capacity</p>
+                      <p className="text-lg font-extrabold tabular-nums mt-1">{formatBrExact(overview.remainingFinancialExposureEtb)}</p>
+                    </div>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-label="Financial exposure utilization" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, overview.globalExposureCapEtb > 0 ? (overview.currentFinancialExposureEtb / overview.globalExposureCapEtb) * 100 : 0)}>
+                    <div
+                      className="h-full rounded-full bg-[#D71920]"
+                      style={{ width: `${Math.min(100, overview.globalExposureCapEtb > 0 ? (overview.currentFinancialExposureEtb / overview.globalExposureCapEtb) * 100 : 0)}%` }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-amber-700">Exposure data is temporarily unavailable. Do not approve new financial operations until the control is healthy.</p>
+              )}
+            </div>
           </div>
         )}
 
