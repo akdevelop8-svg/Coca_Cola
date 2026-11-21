@@ -152,7 +152,7 @@ export function CheckinPage() {
             </p>
           ) : (
             <div className="divide-y divide-slate-100">
-              {(data.history || []).map((item) => (
+              {(data?.history || []).map((item) => (
                 <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs sm:text-sm">
                   <div>
                     <p className="font-mono font-semibold text-slate-900">{item.ethiopiaDate}</p>
