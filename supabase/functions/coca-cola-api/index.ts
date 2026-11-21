@@ -571,6 +571,29 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "auth/register" && method === "POST") {
+    // Do not collect customer data until the owner has published the approved privacy notice.
+    const policySetting = await checked<any>(
+      db.from("app_settings").select("value").eq("key", "privacyPolicyUrl").maybeSingle(),
+      503,
+    );
+    const privacyPolicyUrl = String(policySetting?.value || "").trim();
+    let privacyPolicyIsHttps = false;
+    try {
+      const parsedPolicyUrl = new URL(privacyPolicyUrl);
+      privacyPolicyIsHttps = parsedPolicyUrl.protocol === "https:"
+        && Boolean(parsedPolicyUrl.hostname)
+        && !parsedPolicyUrl.username
+        && !parsedPolicyUrl.password;
+    } catch {
+      privacyPolicyIsHttps = false;
+    }
+    if (!privacyPolicyIsHttps) {
+      throw new ApiError(
+        "New registrations are temporarily paused until the approved Privacy Policy HTTPS link is published.",
+        503,
+      );
+    }
+
     const phone = normalizePhone(body.phone || "");
     const password = String(body.password || "");
     if (!isPhone(phone)) throw new ApiError("Enter a valid Ethiopia phone number (+251 9XXXXXXXX or 09XXXXXXXX).", 400);
