@@ -33,7 +33,6 @@ import type {
   GiftCodeRecord,
   GiftCodeRedemptionRecord,
   PaymentMethodRecord,
-  PayoutChangeRequestRecord,
   SupportChannel,
   SupportTicket,
   WithdrawalRequest,
@@ -73,7 +72,6 @@ export function AdminDashboardPage() {
 
   // Withdrawals & Payout Accounts state
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
-  const [payoutChangeRequests, setPayoutChangeRequests] = useState<PayoutChangeRequestRecord[]>([]);
   const [withdrawalFilter, setWithdrawalFilter] = useState<
     'all' | 'pending' | 'approved' | 'processed' | 'completed' | 'rejected'
   >('all');
@@ -168,13 +166,6 @@ export function AdminDashboardPage() {
       } else if (targetTab === 'deposits') {
         const res = await apiFetch<{ deposits: DepositRequest[] }>('/api/admin/deposits');
         setDeposits(res.deposits);
-      } else if (targetTab === 'withdrawals') {
-        const [res, payoutRes] = await Promise.all([
-          apiFetch<{ withdrawals: WithdrawalRequest[] }>('/api/admin/withdrawals'),
-          apiFetch<{ requests: PayoutChangeRequestRecord[] }>('/api/admin/payout-account-changes'),
-        ]);
-        setWithdrawals(res.withdrawals);
-        setPayoutChangeRequests(payoutRes.requests || []);
       } else if (targetTab === 'tickets') {
         const res = await apiFetch<{ tickets: SupportTicket[] }>('/api/admin/tickets');
         setTickets(res.tickets);
@@ -250,27 +241,6 @@ export function AdminDashboardPage() {
       await loadTab('withdrawals');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not approve withdrawal.');
-    }
-  };
-
-  const handleReviewPayoutAccount = async (id: string, action: 'approve' | 'reject') => {
-    const adminNote = action === 'reject'
-      ? window.prompt('Enter the reason for rejecting this bank account submission (at least 3 characters):')
-      : '';
-    if (action === 'reject' && (adminNote === null || adminNote.trim().length < 3)) return;
-    setErrorMsg('');
-    setStatusMsg('');
-    try {
-      await apiFetch(`/api/admin/payout-account-changes/${id}/${action}`, {
-        method: 'POST',
-        body: JSON.stringify({ adminNote: adminNote || '' }),
-      });
-      setStatusMsg(action === 'approve'
-        ? 'Payout account approved. The customer may now use it for future withdrawals.'
-        : 'Payout account submission rejected. The previous approved account, if any, remains unchanged.');
-      await loadTab('withdrawals');
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Could not review the payout account submission.');
     }
   };
 
@@ -1183,55 +1153,10 @@ export function AdminDashboardPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-bold text-sm text-slate-900">Bank Account Verification Queue</h3>
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                  {payoutChangeRequests.length} awaiting review
-                </span>
-              </div>
-              {payoutChangeRequests.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-500">No bank account submissions are waiting for approval.</p>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {payoutChangeRequests.map((request) => (
-                    <div key={request.id} className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                      <div className="space-y-1 min-w-0">
-                        <p className="font-bold text-sm text-slate-900">
-                          {request.customerName || 'Customer'} · <span className="font-mono">{request.customerPhone || 'Phone unavailable'}</span>
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          {request.newMethodName} · {request.newAccountOwnerName}
-                        </p>
-                        <p className="font-mono text-sm text-slate-900 break-all">{request.newAccountNumber}</p>
-                        <p className="text-xs text-slate-500">{request.reason} · {new Date(request.createdAt).toLocaleString()}</p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleReviewPayoutAccount(request.id, 'approve')}
-                          className="px-3 py-2 rounded-full bg-emerald-600 text-white text-xs font-semibold cursor-pointer"
-                        >
-                          Approve Account
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleReviewPayoutAccount(request.id, 'reject')}
-                          className="px-3 py-2 rounded-full bg-red-600 text-white text-xs font-semibold cursor-pointer"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
               <p className="font-bold">Manual bank payout control</p>
               <p className="mt-1 text-xs leading-5">
-                New and changed customer payout accounts must be approved here before they can be used. A withdrawal is marked completed only after the real bank transfer has been made and its bank reference is recorded.
+                Customer bank details are saved privately in Bank Account Management and are not available for review here. Account details are shown to administrators only with a submitted withdrawal request. Mark a withdrawal completed only after the bank transfer is made and its bank reference is recorded.
               </p>
             </div>
           </div>
