@@ -246,14 +246,6 @@ export interface CustomerDetailProfile {
       registeredAt: string;
     }>;
   };
-  payoutAccount: {
-    id: string;
-    methodName: string;
-    accountNumber: string;
-    accountOwnerName: string;
-    status: string;
-    updatedAt: string;
-  } | null;
   deposits: Array<{
     id: string;
     methodName: string;
