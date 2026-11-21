@@ -1105,7 +1105,7 @@ async function route(request: Request): Promise<Response> {
 
   if (p.startsWith("admin/")) {
     let allowed = ["owner_admin", "super_admin"];
-    if (/^admin\/(overview|deposits|withdrawals|payout-account-changes|payment-methods|gift-codes)/.test(p)) {
+    if (/^admin\/(overview|deposits|withdrawals|payment-methods|gift-codes)/.test(p)) {
       allowed = ["owner_admin", "finance_admin", "admin", "super_admin"];
     } else if (p.startsWith("admin/tickets")) {
       allowed = ["owner_admin", "support_admin", "admin", "super_admin"];
