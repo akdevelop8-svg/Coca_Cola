@@ -112,15 +112,29 @@ export function HomePage() {
     setPurchaseBusy(true);
     setPurchaseResult(null);
     try {
-      const idempotency =
+      const storageKey = `coca-cola:plan-purchase:${user?.id || 'current-user'}:${selectedPlan.code}`;
+      let idempotency =
         purchaseIdempotency.current?.planCode === selectedPlan.code
           ? purchaseIdempotency.current.key
-          : crypto.randomUUID();
+          : null;
+      if (!idempotency) {
+        try {
+          idempotency = localStorage.getItem(storageKey) || crypto.randomUUID();
+          localStorage.setItem(storageKey, idempotency);
+        } catch {
+          idempotency = crypto.randomUUID();
+        }
+      }
       purchaseIdempotency.current = { planCode: selectedPlan.code, key: idempotency };
       await apiFetch('/api/plans/purchase', {
         method: 'POST',
         body: JSON.stringify({ planCode: selectedPlan.code, idempotencyKey: idempotency }),
       });
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        // The in-memory key still protects retries for this page session.
+      }
       purchaseIdempotency.current = null;
       setPurchaseResult({
         ok: true,
