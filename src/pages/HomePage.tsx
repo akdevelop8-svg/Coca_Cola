@@ -41,6 +41,8 @@ export function HomePage() {
   const [selectedPlan, setSelectedPlan] = useState<InvestmentPlanDef | null>(null);
   const [purchaseBusy, setPurchaseBusy] = useState(false);
   const [purchaseResult, setPurchaseResult] = useState<{ ok: boolean; text: string } | null>(null);
+  // Keep one request key per selected plan so retries cannot charge the wallet twice.
+  const purchaseIdempotency = useRef<{ planCode: string; key: string } | null>(null);
 
   const slides = config?.carouselAssets?.length
     ? config.carouselAssets
@@ -110,10 +112,16 @@ export function HomePage() {
     setPurchaseBusy(true);
     setPurchaseResult(null);
     try {
+      const idempotency =
+        purchaseIdempotency.current?.planCode === selectedPlan.code
+          ? purchaseIdempotency.current.key
+          : crypto.randomUUID();
+      purchaseIdempotency.current = { planCode: selectedPlan.code, key: idempotency };
       await apiFetch('/api/plans/purchase', {
         method: 'POST',
-        body: JSON.stringify({ planCode: selectedPlan.code }),
+        body: JSON.stringify({ planCode: selectedPlan.code, idempotencyKey: idempotency }),
       });
+      purchaseIdempotency.current = null;
       setPurchaseResult({
         ok: true,
         text: `${selectedPlan.name} activated with ${formatEtb(selectedPlan.investment)}. Visit Income to manually claim daily mining.`,
