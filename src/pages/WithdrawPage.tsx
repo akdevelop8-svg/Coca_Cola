@@ -7,6 +7,24 @@ import { useAuth } from '../context/AuthContext';
 import { calculateWithdrawalBreakdown, formatBr, formatBrExact, getCustomerDisplayName } from '../shared/finance';
 import type { PayoutAccountRecord, WalletSummary, WithdrawalRequest } from '../types';
 
+const getEthiopiaMinuteOfDay = () => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Addis_Ababa',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+  return hour * 60 + minute;
+};
+
+const isWithinWithdrawalWindow = (minuteOfDay = getEthiopiaMinuteOfDay()) =>
+  minuteOfDay >= 10 * 60 && minuteOfDay < 13 * 60;
+
+const WITHDRAWAL_WINDOW_NOTICE =
+  'Withdrawals are available daily only from 4:00 AM to 7:00 AM Ethiopian clock (10:00 AM–1:00 PM Ethiopia local time).';
+
 export function WithdrawPage() {
   const { user, config } = useAuth();
   const displayName = getCustomerDisplayName(user);
@@ -14,6 +32,7 @@ export function WithdrawPage() {
   const [payoutAccount, setPayoutAccount] = useState<PayoutAccountRecord | null>(null);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ethiopiaTimeMinutes, setEthiopiaTimeMinutes] = useState(getEthiopiaMinuteOfDay);
 
   const [amount, setAmount] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -52,11 +71,24 @@ export function WithdrawPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const refreshEthiopiaTime = () => setEthiopiaTimeMinutes(getEthiopiaMinuteOfDay());
+    refreshEthiopiaTime();
+    const interval = window.setInterval(refreshEthiopiaTime, 15_000);
+    window.addEventListener('focus', refreshEthiopiaTime);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshEthiopiaTime);
+    };
+  }, []);
+
+  const isWithdrawalWindowOpen = isWithinWithdrawalWindow(ethiopiaTimeMinutes);
   const available = summary?.availableBalance ?? 0;
   const parsedAmount = Number(amount);
   const breakdown = calculateWithdrawalBreakdown(parsedAmount, available, minWithdrawal, feePercent);
 
   const canSubmit =
+    isWithdrawalWindowOpen &&
     !loading &&
     payoutAccount?.status === 'approved' &&
     breakdown.isValid;
@@ -66,6 +98,10 @@ export function WithdrawPage() {
     setError('');
     setSuccess('');
 
+    if (!isWithinWithdrawalWindow()) {
+      setError(WITHDRAWAL_WINDOW_NOTICE);
+      return;
+    }
     if (!payoutAccount) {
       setError('Save your payout account under Bank Account Management first.');
       return;
@@ -83,6 +119,12 @@ export function WithdrawPage() {
 
   const handleConfirmWithdraw = async () => {
     if (submitting) return;
+    if (!isWithinWithdrawalWindow()) {
+      setConfirmOpen(false);
+      setError(WITHDRAWAL_WINDOW_NOTICE);
+      setEthiopiaTimeMinutes(getEthiopiaMinuteOfDay());
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
@@ -262,6 +304,20 @@ export function WithdrawPage() {
                 </div>
               )}
 
+              <div
+                role="status"
+                aria-live="polite"
+                className={`rounded-xl border p-3 text-xs sm:text-sm ${
+                  isWithdrawalWindowOpen
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}
+              >
+                {isWithdrawalWindowOpen
+                  ? 'Withdrawal requests are open now. The daily window is 4:00 AM–7:00 AM Ethiopian clock (10:00 AM–1:00 PM local time).'
+                  : `Withdrawal requests are closed right now. ${WITHDRAWAL_WINDOW_NOTICE} Please return during that time.`}
+              </div>
+
               {error && (
                 <div role="alert" className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs sm:text-sm text-red-700">
                   {error}
@@ -387,11 +443,11 @@ export function WithdrawPage() {
               </button>
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || !isWithdrawalWindowOpen}
                 onClick={handleConfirmWithdraw}
                 className="flex-1 py-2.5 rounded-full bg-[#D71920] text-white text-sm font-semibold cursor-pointer disabled:opacity-60"
               >
-                {submitting ? 'Submitting...' : 'Confirm Withdrawal'}
+                {submitting ? 'Submitting...' : isWithdrawalWindowOpen ? 'Confirm Withdrawal' : 'Withdrawal Window Closed'}
               </button>
             </div>
           </div>
