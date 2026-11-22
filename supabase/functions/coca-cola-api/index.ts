@@ -999,11 +999,16 @@ async function route(request: Request): Promise<Response> {
       "withdrawal_requested",
       "/withdraw",
     );
+    const withdrawalId = String(result.withdrawalId || result.id || "");
+    const adminWithdrawalUrl = withdrawalId
+      ? `/admin?tab=withdrawals&withdrawalId=${encodeURIComponent(withdrawalId)}`
+      : "/admin?tab=withdrawals";
     await notifyAdmins(
       ["owner_admin", "finance_admin", "admin", "super_admin"],
       "New withdrawal request",
-      `A customer requested ${amountLabel}; net payout is ${net.toFixed(2)} ETB. Review the saved bank details and process the request.`,
+      `Customer: ${String(user.full_name || "Customer")} · ${String(user.phone || "Phone unavailable")}\nRequest ID: ${withdrawalId || "Unavailable"}\nGross: ${gross.toFixed(2)} ETB · Fee: ${fee.toFixed(2)} ETB · Net payout: ${net.toFixed(2)} ETB. Tap to review the full payout account and request details.`,
       "admin_withdrawal",
+      adminWithdrawalUrl,
     );
     return json({ message: "Withdrawal request submitted for administrator review.", withdrawal: result, ...result }, 201);
   }
