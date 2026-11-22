@@ -29,6 +29,22 @@ const ethiopiaDate = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+const ethiopiaMinuteOfDay = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Addis_Ababa",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  return hour * 60 + minute;
+};
+// Ethiopian clock 4:00–7:00 corresponds to 10:00–13:00 on the local 24-hour clock.
+const isWithdrawalWindowOpen = (date = new Date()) => {
+  const minuteOfDay = ethiopiaMinuteOfDay(date);
+  return minuteOfDay >= 10 * 60 && minuteOfDay < 13 * 60;
+};
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 const uuid = (prefix: string) => prefix + crypto.randomUUID();
 async function loginRateKey(scope: string, value: string) {
@@ -984,6 +1000,12 @@ async function route(request: Request): Promise<Response> {
     return json({ withdrawals: rows.map(withdrawalDto) });
   }
   if (p === "withdrawals" && method === "POST") {
+    if (!isWithdrawalWindowOpen()) {
+      throw new ApiError(
+        "Withdrawals are accepted daily only from 4:00 AM to 7:00 AM Ethiopian clock (10:00 AM–1:00 PM Ethiopia local time). Please try again during that window.",
+        403,
+      );
+    }
     const result = await checked<any>(db.rpc("request_withdrawal_atomic", {
       p_user_id: user.id, p_idempotency_key: String(body.idempotencyKey || crypto.randomUUID()),
       p_gross_amount: Number(body.amount),
