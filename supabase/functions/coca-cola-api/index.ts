@@ -90,7 +90,7 @@ const plans = [
   { code: "M", name: "Plan M", investment: 1000000, dailyMining: 100000, periodDays: 365 },
 ];
 const defaultSettings = {
-  termsVersion: "v1.0",
+  termsVersion: "v1.1",
   registrationBonus: 150,
   dailyCheckinAmount: 2,
   minWithdrawal: 150,
