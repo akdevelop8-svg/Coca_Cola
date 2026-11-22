@@ -131,6 +131,9 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("GIFT_CODE_ALREADY_REDEEMED")) throw new ApiError("You have already redeemed this gift code.", 409);
     if (message.includes("GIFT_CODE_EXPIRED")) throw new ApiError("This gift code has expired.", 400);
     if (message.includes("GIFT_CODES_DISABLED")) throw new ApiError("Gift codes are currently disabled.", 503);
+    if (message.includes("deposits_tx_reference_normalized_uidx")) {
+      throw new ApiError("This bank transaction reference has already been submitted. Check your deposit history before submitting again.", 409);
+    }
     if (message.includes("ACCOUNT_ALREADY_EXISTS")) throw new ApiError("An account with this phone number already exists.", 409);
     if (message.includes("INVALID_REFERRAL_CODE")) throw new ApiError("Invitation code is invalid or does not exist.", 400);
     if (message.includes("ACTIVE_PLAN_LIMIT_REACHED")) throw new ApiError("You already have the maximum number of active plans.", 400);
@@ -867,10 +870,16 @@ async function route(request: Request): Promise<Response> {
     if (!app.financialOperationsEnabled) throw new ApiError("Deposits are temporarily unavailable while platform financial operations are being activated.", 503);
     const amount = Number(form?.get("amount") || body.amount);
     const methodId = String(form?.get("paymentMethodId") || body.paymentMethodId || "");
-    const txReference = String(form?.get("txReference") || body.txReference || "").trim();
+    const txReference = String(form?.get("txReference") || body.txReference || "").trim().toUpperCase();
     const paymentMethod = await checked<any>(db.from("payment_methods").select("*").eq("id", methodId).eq("kind", "deposit").eq("is_active", 1).maybeSingle());
     if (!paymentMethod) throw new ApiError("Selected deposit method is unavailable.", 400);
     if (!Number.isFinite(amount) || amount <= 0 || !txReference) throw new ApiError("Enter a valid amount and bank reference.", 400);
+    const existingReference = await checked<any>(
+      db.from("deposits").select("id").eq("tx_reference", txReference).maybeSingle(),
+    );
+    if (existingReference) {
+      throw new ApiError("This bank transaction reference has already been submitted. Check your deposit history before submitting again.", 409);
+    }
     const receipt = form?.get("receipt");
     if (!(receipt instanceof File)) throw new ApiError("A payment receipt is required.", 400);
     if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(receipt.type) || receipt.size > 5 * 1024 * 1024) {
