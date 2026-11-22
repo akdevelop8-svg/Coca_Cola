@@ -20,7 +20,7 @@ export function WithdrawPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const withdrawalIdempotencyKey = useRef<string | null>(null);
+  const withdrawalIdempotencyKey = useRef<{ amount: string; key: string } | null>(null);
 
   const settings = config?.settings;
   const minWithdrawal = settings?.minWithdrawal ?? 150;
@@ -86,15 +86,35 @@ export function WithdrawPage() {
     setSubmitting(true);
     setError('');
     try {
-      // Reuse the same key for retries until the requested amount changes or succeeds.
-      withdrawalIdempotencyKey.current ||= crypto.randomUUID();
+      // Persist one idempotency key per user and gross amount so a retry after reload
+      // cannot create a second withdrawal if the first response was lost.
+      const amountKey = Number(breakdown.grossAmount).toFixed(2);
+      const storageKey = `coca-cola:withdrawal:${user?.id || 'current-user'}:${amountKey}`;
+      let idempotency =
+        withdrawalIdempotencyKey.current?.amount === amountKey
+          ? withdrawalIdempotencyKey.current.key
+          : null;
+      if (!idempotency) {
+        try {
+          idempotency = localStorage.getItem(storageKey) || crypto.randomUUID();
+          localStorage.setItem(storageKey, idempotency);
+        } catch {
+          idempotency = crypto.randomUUID();
+        }
+      }
+      withdrawalIdempotencyKey.current = { amount: amountKey, key: idempotency };
       const res = await apiFetch<{ message: string }>('/api/withdrawals', {
         method: 'POST',
         body: JSON.stringify({
           amount: breakdown.grossAmount,
-          idempotencyKey: withdrawalIdempotencyKey.current,
+          idempotencyKey: idempotency,
         }),
       });
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        // The in-memory key still protects retries for this page session.
+      }
       setConfirmOpen(false);
       setSuccess(res.message);
       withdrawalIdempotencyKey.current = null;
