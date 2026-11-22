@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   CheckCircle2,
   ClipboardList,
@@ -51,7 +52,10 @@ type AdminTab =
 
 export function AdminDashboardPage() {
   const { user, config, refreshConfig } = useAuth();
-  const [tab, setTab] = useState<AdminTab>('overview');
+  const location = useLocation();
+  const [tab, setTab] = useState<AdminTab>(() =>
+    new URLSearchParams(location.search).get('tab') === 'withdrawals' ? 'withdrawals' : 'overview'
+  );
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -72,6 +76,9 @@ export function AdminDashboardPage() {
 
   // Withdrawals & Payout Accounts state
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [selectedWithdrawalId, setSelectedWithdrawalId] = useState<string | null>(
+    () => new URLSearchParams(location.search).get('withdrawalId')
+  );
   const [withdrawalFilter, setWithdrawalFilter] = useState<
     'all' | 'pending' | 'approved' | 'processed' | 'completed' | 'rejected'
   >('all');
@@ -138,6 +145,15 @@ export function AdminDashboardPage() {
   const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'withdrawals') {
+      setTab('withdrawals');
+      setWithdrawalFilter('all');
+      setSelectedWithdrawalId(params.get('withdrawalId'));
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     if (!bImageFile) {
       setBImagePreviewUrl(null);
       return;
@@ -166,6 +182,9 @@ export function AdminDashboardPage() {
       } else if (targetTab === 'deposits') {
         const res = await apiFetch<{ deposits: DepositRequest[] }>('/api/admin/deposits');
         setDeposits(res.deposits);
+      } else if (targetTab === 'withdrawals') {
+        const res = await apiFetch<{ withdrawals: WithdrawalRequest[] }>('/api/admin/withdrawals');
+        setWithdrawals(res.withdrawals || []);
       } else if (targetTab === 'tickets') {
         const res = await apiFetch<{ tickets: SupportTicket[] }>('/api/admin/tickets');
         setTickets(res.tickets);
@@ -596,6 +615,10 @@ export function AdminDashboardPage() {
         ? withdrawals
         : withdrawals.filter((w) => w.status === withdrawalFilter),
     [withdrawals, withdrawalFilter]
+  );
+  const selectedWithdrawal = useMemo(
+    () => withdrawals.find((w) => w.id === selectedWithdrawalId) || null,
+    [withdrawals, selectedWithdrawalId]
   );
 
   const filteredTickets = useMemo(() => {
@@ -1064,7 +1087,20 @@ export function AdminDashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredWithdrawals.map((w) => (
-                        <tr key={w.id}>
+                        <tr
+                          key={w.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View withdrawal request from ${w.customerName || w.customerPhone || 'customer'}`}
+                          onClick={() => setSelectedWithdrawalId(w.id)}
+                          onKeyDown={(event) => {
+                            if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                              event.preventDefault();
+                              setSelectedWithdrawalId(w.id);
+                            }
+                          }}
+                          className="cursor-pointer hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D71920]"
+                        >
                           <td className="px-4 py-3 font-mono font-bold text-slate-900">
                             {w.customerPhone}
                           </td>
@@ -1108,7 +1144,7 @@ export function AdminDashboardPage() {
                               {w.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap space-x-1.5">
+                          <td className="px-4 py-3 text-right whitespace-nowrap space-x-1.5" onClick={(event) => event.stopPropagation()}>
                             {w.status === 'pending' && (
                               <>
                                 <button
@@ -1192,7 +1228,7 @@ export function AdminDashboardPage() {
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
               <p className="font-bold">Manual bank payout control</p>
               <p className="mt-1 text-xs leading-5">
-                Customer bank details are saved privately in Bank Account Management and are not available for review here. Account details are shown to administrators only with a submitted withdrawal request. Mark a withdrawal completed only after the bank transfer is made and its bank reference is recorded.
+                Select any withdrawal request to review the submitted customer, payout account, full account number, amount breakdown, timeline and bank reference. Full bank details are available only in this administrator review view. Mark a withdrawal completed only after the bank transfer is made and its bank reference is recorded.
               </p>
             </div>
           </div>
@@ -2145,6 +2181,193 @@ export function AdminDashboardPage() {
           </div>
         )}
       </div>
+
+
+      {/* Withdrawal Request Details Modal */}
+      {selectedWithdrawal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Withdrawal Request Details"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedWithdrawalId(null)}
+        >
+          <section
+            className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide font-bold text-[#D71920]">Administrator review</p>
+                <h3 className="text-lg font-extrabold text-slate-900">Withdrawal Request Details</h3>
+                <p className="mt-1 text-xs text-slate-500 font-mono break-all">{selectedWithdrawal.id}</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close withdrawal details"
+                onClick={() => setSelectedWithdrawalId(null)}
+                className="p-2 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Customer name</p>
+                <p className="font-bold text-slate-900 break-words">{selectedWithdrawal.customerName || 'Not provided'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Customer phone</p>
+                <p className="font-bold text-slate-900 font-mono">{selectedWithdrawal.customerPhone || 'Not available'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Payout method</p>
+                <p className="font-bold text-slate-900">{selectedWithdrawal.methodName}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Account owner</p>
+                <p className="font-bold text-slate-900 break-words">{selectedWithdrawal.accountOwnerSnapshot}</p>
+              </div>
+              <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-[11px] text-amber-800">Bank account number · confidential</p>
+                <p className="font-mono font-extrabold text-slate-900 break-all select-all">{selectedWithdrawal.accountNumberSnapshot}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Gross amount</p>
+                <p className="font-extrabold text-slate-900 tabular-nums">{formatBrExact(selectedWithdrawal.grossAmount)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="text-[11px] text-slate-500">Withdrawal fee</p>
+                <p className="font-extrabold text-red-700 tabular-nums">{formatBrExact(selectedWithdrawal.feeAmount)}</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-[11px] text-emerald-800">Net payout</p>
+                <p className="font-extrabold text-emerald-800 tabular-nums">{formatBrExact(selectedWithdrawal.netAmount)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-slate-500">Request submitted</p>
+                <p className="font-semibold text-slate-800">{new Date(selectedWithdrawal.createdAt).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Current status</p>
+                <p className="font-bold uppercase text-slate-900">{selectedWithdrawal.status}</p>
+              </div>
+              {selectedWithdrawal.providerReference && (
+                <div>
+                  <p className="text-slate-500">Bank transfer reference</p>
+                  <p className="font-mono font-bold text-emerald-700 break-all">{selectedWithdrawal.providerReference}</p>
+                </div>
+              )}
+              {selectedWithdrawal.reviewedAt && (
+                <div>
+                  <p className="text-slate-500">Reviewed at</p>
+                  <p className="font-semibold text-slate-800">{new Date(selectedWithdrawal.reviewedAt).toLocaleString()}</p>
+                </div>
+              )}
+              {selectedWithdrawal.processedAt && (
+                <div>
+                  <p className="text-slate-500">Processed at</p>
+                  <p className="font-semibold text-slate-800">{new Date(selectedWithdrawal.processedAt).toLocaleString()}</p>
+                </div>
+              )}
+              {selectedWithdrawal.completedAt && (
+                <div>
+                  <p className="text-slate-500">Completed at</p>
+                  <p className="font-semibold text-slate-800">{new Date(selectedWithdrawal.completedAt).toLocaleString()}</p>
+                </div>
+              )}
+              {selectedWithdrawal.rejectionReason && (
+                <div className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 p-3">
+                  <p className="text-slate-500">Rejection reason</p>
+                  <p className="font-semibold text-red-800">{selectedWithdrawal.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4">
+              {selectedWithdrawal.status === 'pending' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = selectedWithdrawal.id;
+                      setSelectedWithdrawalId(null);
+                      void handleApproveWithdrawal(id);
+                    }}
+                    className="px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Approve request
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectModal({ kind: 'withdrawal', id: selectedWithdrawal.id });
+                      setRejectReason('');
+                      setSelectedWithdrawalId(null);
+                    }}
+                    className="px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Reject request
+                  </button>
+                </>
+              )}
+              {selectedWithdrawal.status === 'approved' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompletionModal({ id: selectedWithdrawal.id, targetStatus: 'processed', currentRef: selectedWithdrawal.providerReference || '' });
+                      setCompletionRef(selectedWithdrawal.providerReference || '');
+                      setSelectedWithdrawalId(null);
+                    }}
+                    className="px-4 py-2 rounded-full bg-blue-600 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Mark processed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompletionModal({ id: selectedWithdrawal.id, targetStatus: 'completed', currentRef: selectedWithdrawal.providerReference || '' });
+                      setCompletionRef(selectedWithdrawal.providerReference || '');
+                      setSelectedWithdrawalId(null);
+                    }}
+                    className="px-4 py-2 rounded-full bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Mark completed
+                  </button>
+                </>
+              )}
+              {selectedWithdrawal.status === 'processed' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompletionModal({ id: selectedWithdrawal.id, targetStatus: 'completed', currentRef: selectedWithdrawal.providerReference || '' });
+                    setCompletionRef(selectedWithdrawal.providerReference || '');
+                    setSelectedWithdrawalId(null);
+                  }}
+                  className="px-4 py-2 rounded-full bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  Mark completed
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedWithdrawalId(null)}
+                className="px-4 py-2 rounded-full border border-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Customer Detail Profile Modal */}
       <CustomerDetailModal
