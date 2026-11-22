@@ -187,10 +187,13 @@ export function OnboardingTermsPage() {
             className="h-44 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed"
           >
             <p>
-              <strong>1. Wallet, Deposits &amp; Withdrawals:</strong> Investment plans (600 to
-              1,000,000 ETB), daily check-ins (2 ETB), daily mining claims, gift codes, and referral
-              rewards operate in ETB wallet amounts. They do not represent real cash, guaranteed returns, withdrawable
-              money, or an endorsement by The Coca-Cola Company.
+              <strong>1. Wallet, Deposits &amp; Withdrawals:</strong> Wallet balances are ETB ledger
+              entries and are not bank deposits or guaranteed returns. Verified deposits are credited
+              after administrator review. When financial operations are enabled, eligible customers may
+              request withdrawals subject to the available balance, minimum amount, configured fee,
+              administrator review, and manual bank-transfer confirmation. Promotional rewards are
+              conditional and must be claimed under the platform rules. This independently operated
+              platform does not claim endorsement by The Coca-Cola Company.
             </p>
             <p>
               <strong>2. Manual Claims &amp; Active Limits:</strong> Daily check-in rewards and daily plan mining
@@ -200,8 +203,8 @@ export function OnboardingTermsPage() {
             <p>
               <strong>3. Deposit &amp; Withdrawal Availability:</strong>{' '}
               {config?.financialOperationsEnabled
-                ? 'Deposit submissions are subject to administrator verification. Withdrawals require administrator review and confirmation of the completed bank transfer.'
-                : 'Deposits and cash withdrawals are currently disabled. Do not transfer money to any bank account or treat wallet amounts as cash while this notice is displayed.'}
+                ? 'Deposits may be submitted for administrator verification. Eligible withdrawals are subject to the displayed minimum amount and fee, administrator review, and confirmation of the manual bank transfer before completion.'
+                : 'Deposits and withdrawals are currently disabled. Do not transfer money to any bank account or treat wallet amounts as withdrawable while this notice is displayed.'}
             </p>
             <p>
               <strong>4. Account Security:</strong> Logout remains accessible under My &gt; Logout (or the sidebar
