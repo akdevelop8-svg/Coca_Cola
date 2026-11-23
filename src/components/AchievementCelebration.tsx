@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Sparkles, Trophy, X } from 'lucide-react';
+import { Check, Gift, Sparkles, Trophy, X } from 'lucide-react';
 import type { AchievementDetail } from '../shared/experience';
 
 const CONFETTI_BITS = Array.from({ length: 18 }, (_, index) => ({
