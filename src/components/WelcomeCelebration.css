@@ -1,0 +1,100 @@
+.cc-welcome-overlay {
+  isolation: isolate;
+  background: rgba(255, 248, 244, .78);
+}
+.cc-welcome-wash {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255,255,255,.92) 0, rgba(255,255,255,.76) 34%, rgba(255,244,237,.74) 100%),
+    linear-gradient(135deg, rgba(215,25,32,.10), rgba(255,211,122,.15));
+}
+.cc-welcome-card {
+  animation: ccWelcomeCardIn 560ms cubic-bezier(.18,.82,.22,1) both;
+}
+.cc-welcome-burst {
+  animation: ccWelcomeIcon 1.3s ease-in-out infinite;
+}
+.cc-firework {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  color: hsl(var(--firework-hue), 88%, 52%);
+  animation: ccFireworkAppear 2.9s ease-out infinite;
+}
+.cc-firework-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+  opacity: 0;
+  animation: ccFireworkSpark 1.35s cubic-bezier(.12,.68,.25,1) both;
+}
+.cc-firework-core {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 18px 8px currentColor;
+  animation: ccFireworkCore 1.1s ease-out both;
+}
+.cc-welcome-confetti {
+  position: absolute;
+  top: -18px;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #F8C64E, #D71920);
+  opacity: 0;
+  animation-name: ccWelcomeConfetti;
+  animation-timing-function: ease-in;
+  animation-fill-mode: both;
+}
+@keyframes ccWelcomeCardIn {
+  from { opacity: 0; transform: translateY(24px) scale(.94); }
+  72% { opacity: 1; transform: translateY(-3px) scale(1.012); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ccWelcomeIcon {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.08); }
+}
+@keyframes ccFireworkAppear {
+  0%, 100% { opacity: 0; }
+  8%, 52% { opacity: 1; }
+  66% { opacity: 0; }
+}
+@keyframes ccFireworkSpark {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.45); }
+}
+@keyframes ccFireworkCore {
+  0%, 100% { opacity: 0; transform: scale(.3); }
+  18% { opacity: 1; transform: scale(1.2); }
+  55% { opacity: 0; transform: scale(.2); }
+}
+@keyframes ccWelcomeConfetti {
+  0% { opacity: 0; transform: translateY(-10px) rotate(0deg); }
+  14% { opacity: .9; }
+  100% { opacity: 0; transform: translateY(110vh) rotate(var(--confetti-turn)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-welcome-card,
+  .cc-welcome-burst,
+  .cc-firework,
+  .cc-firework-spark,
+  .cc-firework-core,
+  .cc-welcome-confetti {
+    animation: none !important;
+    opacity: 1;
+    transform: none !important;
+  }
+  .cc-firework-spark { opacity: .45; }
+  .cc-welcome-confetti { opacity: .22; }
+}

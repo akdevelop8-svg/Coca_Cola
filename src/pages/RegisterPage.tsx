@@ -5,6 +5,7 @@ import { apiFetch } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { CinematicAuthHero } from '../components/CinematicAuthHero';
 import { queueNewCustomerGuide } from '../shared/experience';
+import { triggerWelcomeCelebration } from '../shared/welcome';
 import { isSafeRedirectPath, validateEthiopiaPhone } from '../shared/finance';
 import type { UserProfile } from '../types';
 
@@ -86,6 +87,7 @@ export function RegisterPage() {
       setSuccess('Account created successfully. Redirecting to Platform Terms...');
       queueNewCustomerGuide(res.user.id);
       setUserState(res.user, res.unreadNotifications);
+      triggerWelcomeCelebration('register', res.user.displayName || res.user.fullName || '');
 
       const safeNext = isSafeRedirectPath(redirectTarget);
       const nextParam = redirectTarget ? `?redirect=${encodeURIComponent(safeNext)}` : '';
