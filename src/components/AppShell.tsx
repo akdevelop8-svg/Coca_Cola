@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   Trophy,
   User as UserIcon,
@@ -31,6 +32,7 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { to: '/home', label: 'Home', icon: Home },
+  { to: '/universe', label: 'Universe', icon: Sparkles },
   { to: '/income', label: 'Income', icon: TrendingUp },
   { to: '/team', label: 'Team', icon: Users },
   { to: '/task', label: 'Task', icon: Trophy },

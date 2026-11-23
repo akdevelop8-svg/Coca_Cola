@@ -1,0 +1,32 @@
+/* Coca-Cola Universe — isolated styles; existing app styling is untouched. */
+.cc-universe-page { color: #1f2937; }
+.cc-universe-hero {
+  min-height: 430px;
+  border: 1px solid #f4d7d2;
+  border-radius: 28px;
+  background: radial-gradient(circle at 86% 18%, rgba(255,255,255,.92), transparent 28%), linear-gradient(118deg, #fff8ef 0%, #fff 50%, #ffe4e1 100%);
+  box-shadow: 0 16px 40px rgba(154, 46, 43, .08);
+}
+.cc-universe-stage {
+  background: radial-gradient(circle at 54% 42%, rgba(255,255,255,.95) 0, rgba(255,255,255,.54) 24%, transparent 52%), radial-gradient(circle at 80% 82%, rgba(255,204,188,.52), transparent 32%), linear-gradient(145deg, #ffe7dd 0%, #fff7ec 48%, #fbd4d1 100%);
+}
+.cc-universe-orbit { position: absolute; border: 1px solid rgba(199,49,55,.17); border-radius: 9999px; pointer-events: none; }
+.cc-orbit-one { width: min(82%, 390px); aspect-ratio: 1; transform: rotate(-18deg) scaleY(.66); }
+.cc-orbit-two { width: min(96%, 455px); aspect-ratio: 1; transform: rotate(28deg) scaleY(.73); border-color: rgba(255,255,255,.72); }
+.cc-universe-spark { position: absolute; z-index: 1; color: #c92732; text-shadow: 0 2px 12px rgba(215,25,32,.2); animation: ccUniverseSparkle 3.8s ease-in-out infinite; }
+.cc-spark-one { left: 20%; top: 25%; font-size: 26px; }
+.cc-spark-two { right: 17%; top: 34%; font-size: 34px; animation-delay: -1.3s; }
+.cc-spark-three { left: 27%; bottom: 20%; font-size: 19px; animation-delay: -2.1s; }
+.cc-living-bottle { width: min(62vw, 270px); height: auto; max-height: 420px; overflow: visible; }
+.cc-bottle-float { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; animation: ccBottleFloat 5.5s ease-in-out infinite; transition: filter .25s ease; }
+.cc-bottle-bubble { animation: ccBottleBubble 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.cc-bubble-two { animation-delay: -1.4s; }
+.cc-bubble-three { animation-delay: -2.5s; }
+.cc-frame-ruby { box-shadow: 0 0 0 2px #d71920, 0 10px 22px rgba(215,25,32,.13); }
+.cc-frame-gold { box-shadow: 0 0 0 2px #d6a441, 0 10px 22px rgba(180,130,36,.17); }
+.cc-frame-pearl { box-shadow: 0 0 0 2px #cbd5e1, 0 10px 22px rgba(100,116,139,.15); }
+@keyframes ccBottleFloat { 0%,100% { transform: translateY(3px) rotate(-1.2deg); } 50% { transform: translateY(-11px) rotate(1.2deg); } }
+@keyframes ccBottleBubble { 0%,100% { opacity: .25; transform: translateY(7px) scale(.8); } 50% { opacity: .9; transform: translateY(-10px) scale(1.08); } }
+@keyframes ccUniverseSparkle { 0%,100% { opacity: .45; transform: scale(.88) rotate(-8deg); } 50% { opacity: 1; transform: scale(1.12) rotate(10deg); } }
+@media (max-width: 640px) { .cc-universe-hero { border-radius: 22px; } .cc-universe-stage { min-height: 390px; } .cc-living-bottle { width: min(70vw, 245px); max-height: 370px; } }
+@media (prefers-reduced-motion: reduce) { .cc-bottle-float,.cc-bottle-bubble,.cc-universe-spark { animation: none !important; } }

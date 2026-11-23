@@ -21,6 +21,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CheckinPage } from './pages/CheckinPage';
 import { GiftCodePage } from './pages/GiftCodePage';
+import { UniversePage } from './pages/UniversePage';
 import { AchievementCelebration } from './components/AchievementCelebration';
 import { NewCustomerGuide } from './components/NewCustomerGuide';
 
@@ -127,6 +128,14 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <HomePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/universe"
+          element={
+            <RequireAuth>
+              <UniversePage />
             </RequireAuth>
           }
         />

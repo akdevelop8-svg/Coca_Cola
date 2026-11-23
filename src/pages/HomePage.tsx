@@ -9,6 +9,7 @@ import {
   Headphones,
   Landmark,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   Trophy,
   Users,
@@ -247,6 +248,24 @@ export function HomePage() {
               </div>
             </div>
           )}
+        </section>
+
+        <section aria-label="Coca-Cola Universe" className="overflow-hidden rounded-2xl sm:rounded-3xl border border-rose-100 bg-gradient-to-r from-[#FFF8F1] via-white to-[#FFE7E4] shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#D71920] shadow-sm border border-rose-100">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#B80D13]">A new personal space</p>
+                <h2 className="mt-0.5 text-base sm:text-lg font-extrabold text-[#68151A]">Step into Coca-Cola Universe</h2>
+                <p className="mt-0.5 text-xs sm:text-sm text-[#8A5A56]">Create your identity and style your own Living Bottle.</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => navigate('/universe')} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#D71920] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-[#B80D13] cursor-pointer">
+              Explore Universe <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </section>
 
         {/* B. FOUR ACCOUNT SUMMARY CARDS */}
