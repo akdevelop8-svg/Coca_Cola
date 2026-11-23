@@ -4,14 +4,36 @@ import './WelcomeCelebration.css';
 
 type WelcomeDetail = { kind: 'register' | 'login'; name: string };
 type Firework = { left: string; top: string; delay: number; hue: number };
+type FlowerBloom = { left: string; top: string; delay: number; hue: number; scale: number };
+type MoneySpark = { left: string; delay: number; duration: number; drift: number };
 
 const FIREWORKS: Firework[] = [
-  { left: '14%', top: '26%', delay: 0.1, hue: 350 },
-  { left: '82%', top: '22%', delay: 0.65, hue: 42 },
-  { left: '24%', top: '68%', delay: 1.15, hue: 8 },
-  { left: '75%', top: '65%', delay: 1.7, hue: 28 },
-  { left: '50%', top: '17%', delay: 2.25, hue: 350 },
+  { left: '11%', top: '24%', delay: 0.05, hue: 350 },
+  { left: '87%', top: '19%', delay: 0.48, hue: 46 },
+  { left: '20%', top: '69%', delay: 0.92, hue: 190 },
+  { left: '79%', top: '67%', delay: 1.36, hue: 278 },
+  { left: '49%', top: '12%', delay: 1.8, hue: 126 },
+  { left: '61%', top: '78%', delay: 2.24, hue: 25 },
+  { left: '37%', top: '38%', delay: 2.68, hue: 330 },
 ];
+
+const FLOWERS: FlowerBloom[] = [
+  { left: '4%', top: '48%', delay: 0.05, hue: 342, scale: 0.9 },
+  { left: '17%', top: '10%', delay: 0.6, hue: 42, scale: 0.72 },
+  { left: '31%', top: '78%', delay: 1.05, hue: 320, scale: 0.82 },
+  { left: '68%', top: '9%', delay: 1.5, hue: 345, scale: 0.78 },
+  { left: '91%', top: '43%', delay: 1.95, hue: 42, scale: 0.95 },
+  { left: '82%', top: '83%', delay: 2.4, hue: 328, scale: 0.7 },
+  { left: '7%', top: '84%', delay: 2.85, hue: 48, scale: 0.74 },
+  { left: '94%', top: '9%', delay: 3.3, hue: 345, scale: 0.66 },
+];
+
+const MONEY_SPARKS: MoneySpark[] = Array.from({ length: 18 }, (_, index) => ({
+  left: ((index * 41 + 9) % 96 + 2) + '%',
+  delay: (index % 9) * 0.22,
+  duration: 3.2 + (index % 5) * 0.42,
+  drift: ((index * 29) % 120) - 60,
+}));
 
 const SPARKS = Array.from({ length: 16 }, (_, index) => {
   const angle = (Math.PI * 2 * index) / 16;
@@ -62,6 +84,42 @@ export function WelcomeCelebration() {
     <div className="cc-welcome-overlay fixed inset-0 z-[140] flex items-center justify-center overflow-hidden px-4 py-8" role="presentation">
       <div className="cc-welcome-wash absolute inset-0" aria-hidden="true" />
       <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+        {FLOWERS.map((flower, index) => (
+          <div
+            key={'flower-' + index}
+            className="cc-flower-bloom"
+            style={{
+              left: flower.left,
+              top: flower.top,
+              animationDelay: flower.delay + 's',
+              '--flower-scale': flower.scale,
+              '--flower-hue': String(flower.hue),
+            } as React.CSSProperties}
+          >
+            {Array.from({ length: 5 }, (_, petal) => (
+              <i
+                key={petal}
+                className="cc-flower-petal"
+                style={{ '--petal-turn': (petal * 72) + 'deg' } as React.CSSProperties}
+              />
+            ))}
+            <span className="cc-flower-center" />
+          </div>
+        ))}
+        {MONEY_SPARKS.map((spark, index) => (
+          <span
+            key={'money-' + index}
+            className="cc-money-spark"
+            style={{
+              left: spark.left,
+              animationDelay: spark.delay + 's',
+              animationDuration: spark.duration + 's',
+              '--money-drift': spark.drift + 'px',
+            } as React.CSSProperties}
+          >
+            $
+          </span>
+        ))}
         {FIREWORKS.map((firework, index) => (
           <div
             key={index}
