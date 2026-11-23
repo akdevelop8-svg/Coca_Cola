@@ -21,6 +21,8 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CheckinPage } from './pages/CheckinPage';
 import { GiftCodePage } from './pages/GiftCodePage';
+import { AchievementCelebration } from './components/AchievementCelebration';
+import { NewCustomerGuide } from './components/NewCustomerGuide';
 
 function RequireAuth({
   children,
@@ -239,6 +241,8 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </div>
+      <AchievementCelebration />
+      <NewCustomerGuide userId={user?.role === 'customer' ? user.id : null} />
     </>
   );
 }
