@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { formatEtb } from '../shared/finance';
 import type { GiftCodeRedemptionRecord } from '../types';
+import { celebrateAchievement } from '../shared/experience';
 
 interface CustomerGiftCodeResponse {
   giftCodeEnabled: boolean;
@@ -64,6 +65,11 @@ export function GiftCodePage() {
       });
       setSuccessMsg(res.message);
       setCodeInput('');
+      celebrateAchievement({
+        title: 'Gift Code Redeemed',
+        description: 'Your gift code was accepted and the reward was credited successfully.',
+        category: 'reward',
+      });
       await loadGiftCodes();
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gift code could not be redeemed.');
