@@ -213,7 +213,6 @@ export function RegisterPage() {
                   id="reg-ref"
                   type="text"
                   value={referralCode}
-                  readOnly={Boolean(refFromUrl)}
                   onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                   placeholder={refFromUrl ? 'Invitation code added automatically' : 'Open an invitation link to auto-fill'}
                   readOnly={Boolean(refFromUrl)}
