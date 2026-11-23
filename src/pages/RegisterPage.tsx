@@ -37,7 +37,7 @@ export function RegisterPage() {
     setSuccess('');
 
     if (!validateEthiopiaPhone(phone)) {
-      setError('Enter a valid Ethiopia phone number (+251 9XXXXXXXX or 09XXXXXXXX).');
+      setError('Enter a valid Ethiopia phone number (+251 9/7XXXXXXXX or 09/07XXXXXXXX).');
       return;
     }
     if (password.length < 6) {
@@ -145,7 +145,7 @@ export function RegisterPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+251911223344"
+                  placeholder="+251911223344 or +251711223344"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
                   required
                 />
