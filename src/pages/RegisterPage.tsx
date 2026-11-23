@@ -13,7 +13,14 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const refFromUrl = searchParams.get('ref')?.trim().toUpperCase() || '';
+  const refFromUrl = (
+    searchParams.get('ref') ||
+    searchParams.get('referralCode') ||
+    searchParams.get('referral') ||
+    searchParams.get('invite') ||
+    searchParams.get('invitationCode') ||
+    ''
+  ).trim().toUpperCase();
   const redirectTarget = searchParams.get('redirect');
 
   const [phone, setPhone] = useState('+251');
@@ -26,9 +33,9 @@ export function RegisterPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (refFromUrl) {
-      setReferralCode(refFromUrl);
-    }
+    // URL is the source of truth for referred registrations. Also clear any stale
+    // manually entered code when the browser navigates to a different invitation link.
+    setReferralCode(refFromUrl);
   }, [refFromUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +64,7 @@ export function RegisterPage() {
           phone: phone.trim(),
           password,
           confirmPassword,
-          referralCode: referralCode.trim() || undefined,
+          referralCode: (refFromUrl || referralCode).trim().toUpperCase() || undefined,
         }),
       });
       setSuccess('Account created successfully. Redirecting to Platform Terms...');
@@ -198,7 +205,7 @@ export function RegisterPage() {
 
             <div>
               <label htmlFor="reg-ref" className="block text-sm font-medium text-slate-700 mb-1.5">
-                Invitation Code {refFromUrl ? '(Auto-filled from invitation link)' : '(Optional)'}
+                Invitation Code {refFromUrl ? '(Automatically added from invitation link)' : '(Optional)'}
               </label>
               <div className="relative">
                 <Ticket className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -208,12 +215,18 @@ export function RegisterPage() {
                   value={referralCode}
                   readOnly={Boolean(refFromUrl)}
                   onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                  placeholder="Enter invitation code"
+                  placeholder={refFromUrl ? 'Invitation code added automatically' : 'Open an invitation link to auto-fill'}
+                  readOnly={Boolean(refFromUrl)}
                   className={`w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920] ${
                     refFromUrl ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''
                   }`}
                 />
               </div>
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                {refFromUrl
+                  ? 'This is your inviter’s code from the link. It is locked so the referral is recorded correctly.'
+                  : 'When you register from an invitation link, the inviter’s code will appear here automatically.'}
+              </p>
             </div>
 
             <button
