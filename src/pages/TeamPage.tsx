@@ -39,7 +39,7 @@ interface TeamResponse {
 }
 
 export function TeamPage() {
-  const { user, config } = useAuth();
+  const { user } = useAuth();
   const [data, setData] = useState<TeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1);
