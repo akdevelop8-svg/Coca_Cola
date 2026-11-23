@@ -68,6 +68,9 @@ export function AdminDashboardPage() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<{ id: string; phone: string } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [customerStatusBusy, setCustomerStatusBusy] = useState<string | null>(null);
 
   // Deposits state
   const [deposits, setDeposits] = useState<DepositRequest[]>([]);
@@ -517,6 +520,49 @@ export function AdminDashboardPage() {
     }
   };
 
+  const handleRestoreCustomer = async (customer: any) => {
+    if (customerStatusBusy) return;
+    setErrorMsg('');
+    setStatusMsg('');
+    setCustomerStatusBusy(customer.id);
+    try {
+      await apiFetch(`/api/admin/users/${customer.id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status: 'active' }),
+      });
+      setStatusMsg(`Customer ${customer.phone} restored.`);
+      await loadTab('customers');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to restore customer account.');
+    } finally {
+      setCustomerStatusBusy(null);
+    }
+  };
+
+  const handleConfirmSuspendCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = suspendTarget;
+    const reason = suspendReason.trim();
+    if (!target || customerStatusBusy || reason.length < 8) return;
+    setErrorMsg('');
+    setStatusMsg('');
+    setCustomerStatusBusy(target.id);
+    try {
+      await apiFetch(`/api/admin/users/${target.id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status: 'suspended', reason }),
+      });
+      setStatusMsg(`Customer ${target.phone} suspended.`);
+      setSuspendTarget(null);
+      setSuspendReason('');
+      await loadTab('customers');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to suspend customer account.');
+    } finally {
+      setCustomerStatusBusy(null);
+    }
+  };
+
   // --- Gift Code Management Handlers ---
   const handleToggleGiftFeature = async (nextEnabled: boolean) => {
     setErrorMsg('');
@@ -897,27 +943,22 @@ export function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              setErrorMsg('');
-                              try {
-                                const next = u.status === 'active' ? 'suspended' : 'active';
-                                await apiFetch(`/api/admin/users/${u.id}/status`, {
-                                  method: 'POST',
-                                  body: JSON.stringify({ status: next, reason: 'Admin status toggle' }),
-                                });
-                                setStatusMsg(`Customer ${u.phone} ${next}.`);
-                                await loadTab('customers');
-                              } catch (err: any) {
-                                setErrorMsg(err?.message || 'Failed to update customer status.');
+                            disabled={customerStatusBusy === u.id}
+                            onClick={() => {
+                              if (u.status === 'active') {
+                                setSuspendTarget({ id: u.id, phone: u.phone });
+                                setSuspendReason('');
+                              } else {
+                                void handleRestoreCustomer(u);
                               }
                             }}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${
+                            className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer disabled:opacity-50 ${
                               u.status === 'active'
                                 ? 'bg-red-50 text-red-700 hover:bg-red-100'
                                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                             }`}
                           >
-                            {u.status === 'active' ? 'Suspend' : 'Restore'}
+                            {customerStatusBusy === u.id ? 'Updating...' : u.status === 'active' ? 'Suspend' : 'Restore'}
                           </button>
                         </td>
                       </tr>
@@ -2450,6 +2491,57 @@ export function AdminDashboardPage() {
                 className="flex-1 py-2.5 rounded-full bg-emerald-700 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm {completionModal.targetStatus === 'processed' ? 'Processed' : 'Completed'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Confirm customer suspension with a required reason */}
+      {suspendTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm customer suspension"
+          className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4"
+        >
+          <form
+            onSubmit={handleConfirmSuspendCustomer}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <h3 className="text-base font-bold text-slate-900">Confirm Customer Suspension</h3>
+            <p className="text-sm text-slate-600">
+              You are about to suspend <strong className="font-mono text-slate-900">{suspendTarget.phone}</strong>.
+              This will prevent the customer from signing in until the account is restored.
+            </p>
+            <label htmlFor="customer-suspension-reason" className="block text-xs font-semibold text-slate-700">
+              Reason for suspension (required)
+            </label>
+            <textarea
+              id="customer-suspension-reason"
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder="Explain why this customer account must be suspended (minimum 8 characters)"
+              rows={3}
+              minLength={8}
+              required
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={customerStatusBusy === suspendTarget.id}
+                onClick={() => { setSuspendTarget(null); setSuspendReason(''); }}
+                className="flex-1 py-2.5 rounded-full border border-slate-300 text-sm font-semibold cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={customerStatusBusy === suspendTarget.id || suspendReason.trim().length < 8}
+                className="flex-1 py-2.5 rounded-full bg-red-600 text-white text-sm font-semibold cursor-pointer disabled:opacity-50"
+              >
+                {customerStatusBusy === suspendTarget.id ? 'Suspending...' : 'Confirm Suspend'}
               </button>
             </div>
           </form>

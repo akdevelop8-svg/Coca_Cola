@@ -129,7 +129,7 @@ export function LoginPage() {
                   autoComplete="username"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="+251 9XXXXXXXX or username"
+                  placeholder="+251 9/7XXXXXXXX, 09/07XXXXXXXX, or username"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
                   required
                 />

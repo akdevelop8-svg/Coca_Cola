@@ -245,14 +245,15 @@ export function calculateReferralRewards(
 }
 
 export function normalizeEthiopiaPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('251') && digits.length === 12) {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('2510') && digits.length === 13) {
+    return `+251${digits.slice(4)}`;
+  }
+  if (digits.startsWith('251') && digits.length === 12 && /^251[79]\d{8}$/.test(digits)) {
     return `+${digits}`;
   }
-  if (digits.startsWith('09') && digits.length === 10) {
-    return `+251${digits.slice(1)}`;
-  }
-  if (digits.startsWith('07') && digits.length === 10) {
+  if ((digits.startsWith('09') || digits.startsWith('07')) && digits.length === 10) {
     return `+251${digits.slice(1)}`;
   }
   if ((digits.startsWith('9') || digits.startsWith('7')) && digits.length === 9) {
