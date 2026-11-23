@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { SUPPLIED_ASSETS } from '../shared/constants';
 import { formatEtb, getCustomerDisplayName, MAX_ACTIVE_PLANS } from '../shared/finance';
 import type { LedgerTransaction } from '../types';
+import { celebrateAchievement } from '../shared/experience';
 
 interface PurchasedPlanItem {
   id: string;
@@ -76,6 +77,14 @@ export function IncomePage() {
         method: 'POST',
       });
       setStatusMsg(res.message);
+      const claimedPlan = data?.purchases.find((purchase) => purchase.id === purchaseId);
+      celebrateAchievement({
+        title: 'Daily Plan Reward Claimed',
+        description: claimedPlan
+          ? `Your daily claim for Plan ${claimedPlan.planCode} was successfully recorded.`
+          : 'Your daily plan reward was successfully recorded.',
+        category: 'reward',
+      });
       await loadIncome();
     } catch (err: any) {
       setError(err?.message || 'Could not claim daily mining reward.');
