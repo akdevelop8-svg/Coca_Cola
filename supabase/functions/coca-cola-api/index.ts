@@ -40,10 +40,34 @@ const ethiopiaMinuteOfDay = (date = new Date()) => {
   const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
   return hour * 60 + minute;
 };
-// Ethiopian clock 4:00–7:00 corresponds to 10:00–13:00 on the local 24-hour clock.
-const isWithdrawalWindowOpen = (date = new Date()) => {
-  const minuteOfDay = ethiopiaMinuteOfDay(date);
-  return minuteOfDay >= 10 * 60 && minuteOfDay < 13 * 60;
+const parseWithdrawalClockMinutes = (value: unknown) => {
+  const text = String(value || "");
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) return null;
+  const [hours, minutes] = text.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+const formatWithdrawalClock12 = (totalMinutes: number) => {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
+};
+const withdrawalWindowLabel = (startTime: unknown, endTime: unknown) => {
+  const start = parseWithdrawalClockMinutes(startTime);
+  const end = parseWithdrawalClockMinutes(endTime);
+  if (start === null || end === null) return "Schedule unavailable";
+  return `${formatWithdrawalClock12(start)}–${formatWithdrawalClock12(end)} Ethiopian clock (${formatWithdrawalClock12(start + 360)}–${formatWithdrawalClock12(end + 360)} EAT)`;
+};
+const isWithdrawalWindowOpen = (settings: any, date = new Date()) => {
+  if (!settings || settings.withdrawalEnabled !== true) return false;
+  const start = parseWithdrawalClockMinutes(settings.withdrawalStartTime);
+  const end = parseWithdrawalClockMinutes(settings.withdrawalEndTime);
+  if (start === null || end === null || start === end) return false;
+  const standardMinutes = ethiopiaMinuteOfDay(date);
+  const ethiopianClockMinutes = (standardMinutes - 6 * 60 + 1440) % 1440;
+  return start < end
+    ? ethiopianClockMinutes >= start && ethiopianClockMinutes < end
+    : ethiopianClockMinutes >= start || ethiopianClockMinutes < end;
 };
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 const uuid = (prefix: string) => prefix + crypto.randomUUID();
@@ -124,6 +148,9 @@ const defaultSettings = {
   depositCbeAccountName: "CBE (Commercial Bank of Ethiopia)",
   depositCbeAccountNumber: "1000673029578",
   withdrawalMethodOnly: "CBE (Commercial Bank of Ethiopia)",
+  withdrawalEnabled: true,
+  withdrawalStartTime: "04:00",
+  withdrawalEndTime: "11:00",
   privacyPolicyUrl: "",
   maintenanceMode: false,
 };
@@ -1008,9 +1035,15 @@ async function route(request: Request): Promise<Response> {
     return json({ withdrawals: rows.map(withdrawalDto) });
   }
   if (p === "withdrawals" && method === "POST") {
-    if (!isWithdrawalWindowOpen()) {
+    const withdrawalSettings = await getAppSettings();
+    const startTime = withdrawalSettings.settings.withdrawalStartTime;
+    const endTime = withdrawalSettings.settings.withdrawalEndTime;
+    if (!withdrawalSettings.settings.withdrawalEnabled) {
+      throw new ApiError("Customer withdrawals are currently disabled by the administrator. Please check again later.", 503);
+    }
+    if (!isWithdrawalWindowOpen(withdrawalSettings.settings)) {
       throw new ApiError(
-        "Withdrawals are accepted daily only from 4:00 AM to 7:00 AM Ethiopian clock (10:00 AM–1:00 PM Ethiopia local time). Please try again during that window.",
+        `Withdrawal requests are accepted daily only during ${withdrawalWindowLabel(startTime, endTime)}. Please try again during that window.`,
         403,
       );
     }
@@ -1571,9 +1604,28 @@ async function route(request: Request): Promise<Response> {
   if(p==="admin/settings" && ["POST","PUT","PATCH"].includes(method)){
     const changes=body.settings||body;
     const allowed=new Set(Object.keys(defaultSettings).concat(["financial_operations_enabled","promotional_rewards_enabled"]));
+    const keyAliases:Record<string,string>={
+      promotionalRewardsEnabled:"promotional_rewards_enabled",
+      withdrawal_enabled:"withdrawalEnabled",
+      withdrawal_start_time:"withdrawalStartTime",
+      withdrawal_end_time:"withdrawalEndTime",
+    };
     const normalizedChanges=Object.entries(changes).map(([key,value])=>[
-      key==="promotionalRewardsEnabled" ? "promotional_rewards_enabled" : key, value,
+      keyAliases[key] || key, value,
     ]);
+    const currentSettings=await getAppSettings();
+    const settingsPatch=Object.fromEntries(normalizedChanges.filter(([key])=>[
+      "withdrawalEnabled","withdrawalStartTime","withdrawalEndTime",
+    ].includes(String(key))));
+    const nextWithdrawalSettings={...currentSettings.settings,...settingsPatch};
+    if (typeof nextWithdrawalSettings.withdrawalEnabled !== "boolean") {
+      throw new ApiError("Withdrawal enabled setting must be true or false.",400);
+    }
+    const nextWithdrawalStart=parseWithdrawalClockMinutes(nextWithdrawalSettings.withdrawalStartTime);
+    const nextWithdrawalEnd=parseWithdrawalClockMinutes(nextWithdrawalSettings.withdrawalEndTime);
+    if(nextWithdrawalStart===null || nextWithdrawalEnd===null || nextWithdrawalStart===nextWithdrawalEnd){
+      throw new ApiError("Enter valid Ethiopian-clock withdrawal times. Start and end times must be different.",400);
+    }
     const privacyPolicyChange=normalizedChanges.find(([key])=>key==="privacyPolicyUrl");
     if(privacyPolicyChange){
       const candidate=String(privacyPolicyChange[1]??"").trim();

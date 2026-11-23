@@ -19,20 +19,50 @@ const getEthiopiaMinuteOfDay = () => {
   return hour * 60 + minute;
 };
 
-const isWithinWithdrawalWindow = (minuteOfDay = getEthiopiaMinuteOfDay()) =>
-  minuteOfDay >= 10 * 60 && minuteOfDay < 13 * 60;
+const getEthiopianClockMinuteOfDay = () =>
+  (getEthiopiaMinuteOfDay() - 6 * 60 + 1440) % 1440;
 
-const WITHDRAWAL_WINDOW_NOTICE =
-  'Withdrawals are available daily only from 4:00 AM to 7:00 AM Ethiopian clock (10:00 AM–1:00 PM Ethiopia local time).';
+const parseClockMinutes = (value: string) => {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const isWithinWithdrawalWindow = (
+  startTime: string,
+  endTime: string,
+  minuteOfDay = getEthiopianClockMinuteOfDay(),
+) => {
+  const start = parseClockMinutes(startTime);
+  const end = parseClockMinutes(endTime);
+  if (start === null || end === null || start === end) return false;
+  return start < end
+    ? minuteOfDay >= start && minuteOfDay < end
+    : minuteOfDay >= start || minuteOfDay < end;
+};
+
+const formatClock12 = (totalMinutes: number) => {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
+};
+
+const withdrawalWindowLabel = (startTime: string, endTime: string) => {
+  const start = parseClockMinutes(startTime);
+  const end = parseClockMinutes(endTime);
+  if (start === null || end === null) return 'Schedule unavailable';
+  return `${formatClock12(start)}–${formatClock12(end)} Ethiopian clock (${formatClock12(start + 360)}–${formatClock12(end + 360)} EAT)`;
+};
 
 export function WithdrawPage() {
-  const { user, config } = useAuth();
+  const { user, config, refreshConfig } = useAuth();
   const displayName = getCustomerDisplayName(user);
   const [summary, setSummary] = useState<WalletSummary | null>(null);
   const [payoutAccount, setPayoutAccount] = useState<PayoutAccountRecord | null>(null);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ethiopiaTimeMinutes, setEthiopiaTimeMinutes] = useState(getEthiopiaMinuteOfDay);
+  const [ethiopiaClockMinutes, setEthiopiaClockMinutes] = useState(getEthiopianClockMinuteOfDay);
 
   const [amount, setAmount] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -42,6 +72,10 @@ export function WithdrawPage() {
   const withdrawalIdempotencyKey = useRef<{ amount: string; key: string } | null>(null);
 
   const settings = config?.settings;
+  const withdrawalEnabled = settings?.withdrawalEnabled ?? true;
+  const withdrawalStartTime = settings?.withdrawalStartTime ?? '04:00';
+  const withdrawalEndTime = settings?.withdrawalEndTime ?? '11:00';
+  const currentWithdrawalWindowLabel = withdrawalWindowLabel(withdrawalStartTime, withdrawalEndTime);
   const minWithdrawal = settings?.minWithdrawal ?? 150;
   const feePercent = settings?.withdrawalFeePercent ?? 17;
   const activePayoutNames =
@@ -72,7 +106,7 @@ export function WithdrawPage() {
   }, []);
 
   useEffect(() => {
-    const refreshEthiopiaTime = () => setEthiopiaTimeMinutes(getEthiopiaMinuteOfDay());
+    const refreshEthiopiaTime = () => setEthiopiaClockMinutes(getEthiopianClockMinuteOfDay());
     refreshEthiopiaTime();
     const interval = window.setInterval(refreshEthiopiaTime, 15_000);
     window.addEventListener('focus', refreshEthiopiaTime);
@@ -82,7 +116,20 @@ export function WithdrawPage() {
     };
   }, []);
 
-  const isWithdrawalWindowOpen = isWithinWithdrawalWindow(ethiopiaTimeMinutes);
+  useEffect(() => {
+    const refreshAvailability = () => { void refreshConfig(); };
+    refreshAvailability();
+    const interval = window.setInterval(refreshAvailability, 60_000);
+    window.addEventListener('focus', refreshAvailability);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshAvailability);
+    };
+  }, [refreshConfig]);
+
+  const isWithdrawalWindowOpen =
+    withdrawalEnabled &&
+    isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime, ethiopiaClockMinutes);
   const available = summary?.availableBalance ?? 0;
   const parsedAmount = Number(amount);
   const breakdown = calculateWithdrawalBreakdown(parsedAmount, available, minWithdrawal, feePercent);
@@ -98,8 +145,12 @@ export function WithdrawPage() {
     setError('');
     setSuccess('');
 
-    if (!isWithinWithdrawalWindow()) {
-      setError(WITHDRAWAL_WINDOW_NOTICE);
+    if (!withdrawalEnabled) {
+      setError('Customer withdrawals are currently disabled by the administrator.');
+      return;
+    }
+    if (!isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime)) {
+      setError(`Withdrawal requests are accepted daily only during ${currentWithdrawalWindowLabel}.`);
       return;
     }
     if (!payoutAccount) {
@@ -119,10 +170,15 @@ export function WithdrawPage() {
 
   const handleConfirmWithdraw = async () => {
     if (submitting) return;
-    if (!isWithinWithdrawalWindow()) {
+    if (!withdrawalEnabled) {
       setConfirmOpen(false);
-      setError(WITHDRAWAL_WINDOW_NOTICE);
-      setEthiopiaTimeMinutes(getEthiopiaMinuteOfDay());
+      setError('Customer withdrawals are currently disabled by the administrator.');
+      return;
+    }
+    if (!isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime)) {
+      setConfirmOpen(false);
+      setError(`Withdrawal requests are accepted daily only during ${currentWithdrawalWindowLabel}.`);
+      setEthiopiaClockMinutes(getEthiopianClockMinuteOfDay());
       return;
     }
     setSubmitting(true);
@@ -313,9 +369,11 @@ export function WithdrawPage() {
                     : 'bg-amber-50 border-amber-200 text-amber-900'
                 }`}
               >
-                {isWithdrawalWindowOpen
-                  ? 'Withdrawal requests are open now. The daily window is 4:00 AM–7:00 AM Ethiopian clock (10:00 AM–1:00 PM local time).'
-                  : `Withdrawal requests are closed right now. ${WITHDRAWAL_WINDOW_NOTICE} Please return during that time.`}
+                {!withdrawalEnabled
+                  ? `Customer withdrawals are currently disabled by the administrator. Published schedule: ${currentWithdrawalWindowLabel}.`
+                  : isWithdrawalWindowOpen
+                    ? `Withdrawal requests are open now. Daily schedule: ${currentWithdrawalWindowLabel}.`
+                    : `Withdrawal requests are closed right now. They are available daily only during ${currentWithdrawalWindowLabel}. Please return during that time.`}
               </div>
 
               {error && (
