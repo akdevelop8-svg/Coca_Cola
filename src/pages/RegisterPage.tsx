@@ -100,7 +100,7 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gradient-to-br from-[#7A0407] via-[#B80D13] to-[#D71920] flex flex-col lg:flex-row">
       <CinematicAuthHero
         imageSrc="/assets/aistudio/factory_93c2daeb.jpg"
         imageAlt="Modern beverage bottling facility"
