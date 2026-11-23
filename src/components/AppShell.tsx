@@ -74,7 +74,7 @@ export function AppShell({
   const displayName = getCustomerDisplayName(user);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#7A0407] via-[#B80D13] to-[#D71920] text-white flex">
+    <div className="cc-site-backdrop min-h-screen text-white flex">
       {/* Desktop Fixed Left Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-gradient-to-b from-[#C81018] via-[#A3080C] to-[#7A0407] text-white z-30 shadow-xl">
         <div className="px-5 py-5 flex items-center justify-center border-b border-white/15">

@@ -63,7 +63,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#7A0407] via-[#B80D13] to-[#D71920] flex flex-col lg:flex-row">
+    <div className="cc-site-backdrop min-h-screen flex flex-col lg:flex-row">
       <CinematicAuthHero
         imageSrc="/assets/aistudio/bottles_3242d4ef.jpg"
         imageAlt="Coca-Cola bottle collection"

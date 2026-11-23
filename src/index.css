@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+.cc-site-backdrop {
+  min-height: 100vh;
+  isolation: isolate;
+  background-color: #8b0008;
+  background-image:
+    radial-gradient(ellipse 52% 46% at 12% 18%, rgba(24, 157, 255, .72) 0%, rgba(24, 157, 255, .28) 38%, transparent 76%),
+    radial-gradient(ellipse 54% 48% at 87% 20%, rgba(175, 86, 255, .76) 0%, rgba(175, 86, 255, .30) 40%, transparent 78%),
+    radial-gradient(ellipse 58% 48% at 64% 94%, rgba(255, 218, 55, .78) 0%, rgba(255, 218, 55, .28) 42%, transparent 80%),
+    radial-gradient(ellipse 52% 42% at 48% 52%, rgba(239, 36, 54, .30) 0%, transparent 78%),
+    linear-gradient(125deg, #780009 0%, #b80d18 31%, #d71920 56%, #a30819 78%, #690014 100%);
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+@media (max-width: 767px) {
+  .cc-site-backdrop {
+    background-attachment: scroll;
+    background-image:
+      radial-gradient(ellipse 75% 35% at 0% 12%, rgba(24, 157, 255, .72) 0%, rgba(24, 157, 255, .26) 46%, transparent 82%),
+      radial-gradient(ellipse 78% 38% at 100% 28%, rgba(175, 86, 255, .76) 0%, rgba(175, 86, 255, .30) 46%, transparent 84%),
+      radial-gradient(ellipse 92% 42% at 54% 100%, rgba(255, 218, 55, .78) 0%, rgba(255, 218, 55, .28) 45%, transparent 85%),
+      linear-gradient(155deg, #780009 0%, #b80d18 38%, #d71920 64%, #85000f 100%);
+  }
+}
+
 @layer base {
   :root {
     --brand-red: #d71920;
@@ -21,12 +46,10 @@
     min-height: 100vh;
     font-family: var(--font-body);
     background:
-      radial-gradient(ellipse at 12% 8%, rgba(255, 255, 255, .14), transparent 34%),
-      radial-gradient(ellipse at 84% 16%, rgba(255, 213, 65, .24), transparent 29%),
-      radial-gradient(ellipse at 14% 72%, rgba(37, 164, 255, .24), transparent 34%),
-      radial-gradient(ellipse at 78% 82%, rgba(150, 82, 255, .25), transparent 35%),
-      radial-gradient(ellipse at 52% 42%, rgba(215, 25, 32, .16), transparent 42%),
-      linear-gradient(135deg, #650007 0%, #a3080c 29%, #d71920 55%, #8e0710 78%, #5f0014 100%);
+      radial-gradient(ellipse 52% 46% at 12% 18%, rgba(24, 157, 255, .72) 0%, rgba(24, 157, 255, .28) 38%, transparent 76%),
+      radial-gradient(ellipse 54% 48% at 87% 20%, rgba(175, 86, 255, .76) 0%, rgba(175, 86, 255, .30) 40%, transparent 78%),
+      radial-gradient(ellipse 58% 48% at 64% 94%, rgba(255, 218, 55, .78) 0%, rgba(255, 218, 55, .28) 42%, transparent 80%),
+      linear-gradient(125deg, #780009 0%, #b80d18 31%, #d71920 56%, #a30819 78%, #690014 100%);
     background-color: var(--surface-canvas);
     background-attachment: fixed;
     color: #fff;
