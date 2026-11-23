@@ -32,6 +32,8 @@ export function CustomerDetailModal({
   const [error, setError] = useState('');
   const [section, setSection] = useState<DetailSection>('timeline');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showSuspendConfirm, setShowSuspendConfirm] = useState(false);
+  const [suspendReason, setSuspendReason] = useState('');
 
   useEffect(() => {
     if (!customerId) {
@@ -59,25 +61,43 @@ export function CustomerDetailModal({
 
   if (!customerId) return null;
 
-  const handleToggleStatus = async () => {
+  const updateCustomerStatus = async (next: 'active' | 'suspended', reason?: string) => {
     if (!profile || updatingStatus) return;
     setUpdatingStatus(true);
     try {
-      const next = profile.customer.status === 'active' ? 'suspended' : 'active';
       await apiFetch(`/api/admin/users/${profile.customer.id}/status`, {
         method: 'POST',
-        body: JSON.stringify({ status: next, reason: `Admin ${next} via profile` }),
+        body: JSON.stringify({ status: next, ...(reason ? { reason } : {}) }),
       });
       const updated = await apiFetch<CustomerDetailProfile>(
         `/api/admin/customers/${profile.customer.id}`
       );
       setProfile(updated);
+      setShowSuspendConfirm(false);
+      setSuspendReason('');
       onStatusChanged();
     } catch (err: any) {
       setError(err?.message || 'Failed to update customer status.');
     } finally {
       setUpdatingStatus(false);
     }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!profile || updatingStatus) return;
+    if (profile.customer.status === 'active') {
+      setSuspendReason('');
+      setShowSuspendConfirm(true);
+      return;
+    }
+    await updateCustomerStatus('active');
+  };
+
+  const handleConfirmSuspend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const reason = suspendReason.trim();
+    if (reason.length < 8) return;
+    await updateCustomerStatus('suspended', reason);
   };
 
   return (
@@ -459,6 +479,55 @@ export function CustomerDetailModal({
           ) : null}
         </div>
       </div>
+
+      {showSuspendConfirm && profile && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm customer suspension"
+          className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4"
+        >
+          <form
+            onSubmit={handleConfirmSuspend}
+            className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <h3 className="text-base font-bold text-slate-900">Confirm Customer Suspension</h3>
+            <p className="text-sm text-slate-600">
+              Suspending <strong className="font-mono text-slate-900">{profile.customer.phone}</strong> will prevent this customer from signing in.
+            </p>
+            <label htmlFor="profile-suspension-reason" className="block text-xs font-semibold text-slate-700">
+              Reason for suspension (required)
+            </label>
+            <textarea
+              id="profile-suspension-reason"
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder="Explain why this customer account must be suspended (minimum 8 characters)"
+              rows={3}
+              minLength={8}
+              required
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => { setShowSuspendConfirm(false); setSuspendReason(''); }}
+                className="flex-1 py-2.5 rounded-full border border-slate-300 text-sm font-semibold cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updatingStatus || suspendReason.trim().length < 8}
+                className="flex-1 py-2.5 rounded-full bg-red-600 text-white text-sm font-semibold cursor-pointer disabled:opacity-50"
+              >
+                {updatingStatus ? 'Suspending...' : 'Confirm Suspend'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
