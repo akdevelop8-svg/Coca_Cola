@@ -3,6 +3,7 @@ import { CalendarCheck, CheckCircle2, Clock, Coins, ShieldCheck } from 'lucide-r
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { formatEtb } from '../shared/finance';
+import { celebrateAchievement } from '../shared/experience';
 
 interface CheckinStatusResponse {
   checkedInToday: boolean;
@@ -52,6 +53,11 @@ export function CheckinPage() {
         method: 'POST',
       });
       setStatusMsg(res.message);
+      celebrateAchievement({
+        title: 'Daily Check-In Complete',
+        description: 'Your daily check-in was confirmed successfully.',
+        category: 'reward',
+      });
       await loadStatus();
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not claim daily check-in.');

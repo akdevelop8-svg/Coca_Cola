@@ -3,8 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Phone, ArrowRight } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { CocaColaScriptLogo } from '../components/BrandMark';
-import { SUPPLIED_ASSETS } from '../shared/constants';
+import { CinematicAuthHero } from '../components/CinematicAuthHero';
 import { isSafeRedirectPath } from '../shared/finance';
 import { isAdminRole } from '../shared/roles';
 import type { UserProfile } from '../types';
@@ -63,33 +62,14 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] flex flex-col lg:flex-row">
-      {/* Left Branded Banner */}
-      <div className="relative lg:w-1/2 bg-gradient-to-br from-[#E11D24] via-[#B80D13] to-[#7A0407] text-white p-6 sm:p-10 flex flex-col justify-between overflow-hidden">
-        <div className="relative z-10 flex items-center justify-between">
-          <CocaColaScriptLogo color="#FFFFFF" className="h-10 sm:h-12" />
-        </div>
-
-        <div className="relative z-10 my-8 lg:my-auto max-w-md">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-            Invest Today <span className="text-amber-300">Build a Better Tomorrow</span>
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-white/90 leading-relaxed">
-            Together for a Prosperous Future. Sign in to explore the investment plans, manual daily check-ins, and account records.
-          </p>
-          <div className="mt-6 rounded-2xl overflow-hidden border border-white/20 shadow-xl bg-white flex justify-center">
-            <img
-              src={SUPPLIED_ASSETS.bottles}
-              alt="Coca-Cola bottles collection"
-              className="h-44 sm:h-52 w-auto object-cover [clip-path:inset(6px_0_0_0)]"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </div>
-
-        <p className="relative z-10 text-xs text-white/75">
-          Protected authentication · Ethiopia (+251)
-        </p>
-      </div>
+      <CinematicAuthHero
+        imageSrc="/assets/aistudio/bottles_3242d4ef.jpg"
+        imageAlt="Coca-Cola bottle collection"
+        eyebrow="Your platform, beautifully connected"
+        title={<>Invest Today <span className="text-amber-200">Build a Better Tomorrow</span></>}
+        description="Welcome back. Sign in to explore your dashboard, purchased plans, daily claims and account activity."
+        footer="Secure sign-in · Ethiopia (+251)"
+      />
 
       {/* Phone Number or Username and Password */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">

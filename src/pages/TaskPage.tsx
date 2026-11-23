@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import type { TeamTaskLevelProgress } from '../shared/finance';
+import { celebrateAchievement } from '../shared/experience';
 
 interface TasksResponse {
   verifiedDepositsTotal: number;
@@ -60,6 +61,11 @@ export function TaskPage() {
         res.message ||
           `Level ${task.level} reward (+${formatEtbWhole(task.rewardAmount)}) settled and credited to your wallet.`
       );
+      celebrateAchievement({
+        title: `Level ${task.level} Milestone Unlocked`,
+        description: `Your ${formatEtbWhole(task.rewardAmount)} team task reward was successfully claimed.`,
+        category: 'milestone',
+      });
       await loadTasks();
     } catch (err: any) {
       setErrorMsg(err?.message || 'Unable to settle task reward right now.');

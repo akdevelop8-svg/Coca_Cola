@@ -28,6 +28,7 @@ import {
   MAX_ACTIVE_PLANS,
 } from '../shared/finance';
 import type { WalletSummary } from '../types';
+import { celebrateAchievement } from '../shared/experience';
 
 export function HomePage() {
   const { user, config, refreshConfig } = useAuth();
@@ -139,6 +140,11 @@ export function HomePage() {
       setPurchaseResult({
         ok: true,
         text: `${selectedPlan.name} activated with ${formatEtb(selectedPlan.investment)}. Visit Income to manually claim daily mining.`,
+      });
+      celebrateAchievement({
+        title: 'Plan Activated',
+        description: `${selectedPlan.name} was successfully activated on your account.`,
+        category: 'milestone',
       });
       await loadSummary();
     } catch (err: any) {
