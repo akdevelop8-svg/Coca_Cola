@@ -2,6 +2,8 @@ import type { UserRole } from '../types';
 
 export const ADMIN_ROLES: UserRole[] = [
   'owner_admin',
+  'super_admin',
+  'admin',
   'finance_admin',
   'support_admin',
   'content_admin',

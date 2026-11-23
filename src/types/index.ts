@@ -1,6 +1,8 @@
 export type UserRole =
   | 'customer'
   | 'owner_admin'
+  | 'super_admin'
+  | 'admin'
   | 'finance_admin'
   | 'support_admin'
   | 'content_admin'

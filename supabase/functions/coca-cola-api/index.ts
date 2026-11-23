@@ -647,10 +647,11 @@ async function route(request: Request): Promise<Response> {
 
   if (p === "auth/login" && method === "POST") {
     const identifier = String(body.identifier || body.phone || "").trim();
-    const isPhoneIdentifier = isPhone(identifier) || /^09\d{8}$/.test(identifier) || /^2519\d{8}$/.test(identifier);
-    const normalizedIdentifier = isPhoneIdentifier
-      ? normalizePhone(identifier)
-      : identifier.toLowerCase();
+    // Normalize before classifying the input so formatted Ethiopian numbers
+    // such as "+251 9..." and "09 ..." are treated as phone numbers.
+    const phoneCandidate = normalizePhone(identifier);
+    const isPhoneIdentifier = isPhone(phoneCandidate);
+    const normalizedIdentifier = isPhoneIdentifier ? phoneCandidate : identifier.toLowerCase();
     const forwardedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || request.headers.get("x-real-ip")
       || "unknown";
@@ -662,7 +663,7 @@ async function route(request: Request): Promise<Response> {
     let result: any;
     if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizedIdentifier).maybeSingle();
     else if (identifier.includes("@")) result = await db.from("users").select("*").eq("email", normalizedIdentifier).maybeSingle();
-    else result = await db.from("users").select("*").ilike("username", identifier).maybeSingle();
+    else result = await db.from("users").select("*").ilike("username", normalizedIdentifier).maybeSingle();
     if (result?.error || !result?.data || result.data.status !== "active") throw new ApiError("Phone number or password is incorrect.", 401);
     const valid = await bcrypt.compare(String(body.password || ""), result.data.password_hash);
     if (!valid) throw new ApiError("Phone number or password is incorrect.", 401);
@@ -1185,7 +1186,7 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "admin/users" && method === "GET") {
-    let q = db.from("users").select("id,full_name,nickname,phone,email,role,status,referral_code,created_at,last_active_at").order("created_at", { ascending: false }).limit(200);
+    let q = db.from("users").select("id,full_name,nickname,phone,email,role,status,referral_code,created_at,last_active_at").eq("role", "customer").order("created_at", { ascending: false }).limit(200);
     const term = String(query.get("q") || "").trim();
     if (term) q = q.or("phone.ilike.%" + term + "%,full_name.ilike.%" + term + "%,nickname.ilike.%" + term + "%");
     const rows = await checked<any[]>(q);
@@ -1214,9 +1215,31 @@ async function route(request: Request): Promise<Response> {
   const adminStatus = p.match(/^admin\/users\/([^/]+)\/status$/);
   if (adminStatus && method === "POST") {
     const status = String(body.status || "");
+    const targetId = decodeURIComponent(adminStatus[1]);
     if (!["active","suspended"].includes(status)) throw new ApiError("Invalid account status.", 400);
-    await checked(db.from("users").update({ status }).eq("id", decodeURIComponent(adminStatus[1])));
-    return json({ success: true });
+    const target = await checked<any>(
+      db.from("users").select("id,role,status").eq("id", targetId).maybeSingle(),
+    );
+    if (!target) throw new ApiError("Account not found.", 404);
+    if (status === "suspended" && targetId === user.id) {
+      throw new ApiError("You cannot suspend your own administrator account.", 403);
+    }
+    if (status === "suspended" && target.role === "owner_admin" && target.status !== "suspended") {
+      const { count, error } = await db.from("users").select("id", { count: "exact", head: true })
+        .eq("role", "owner_admin").eq("status", "active");
+      if (error) throw new ApiError("Administrator safety check failed. Please try again.", 503);
+      if ((count || 0) <= 1) {
+        throw new ApiError("The last active owner administrator cannot be suspended.", 409);
+      }
+    }
+    if (target.status === status) return json({ success: true, status });
+    await checked(db.from("users").update({ status }).eq("id", targetId));
+    await checked(db.from("admin_audit_logs").insert({
+      id: uuid("aud_"), actor_user_id: user.id, actor_role: user.role,
+      action: "user_status_changed", target_type: "user", target_id: targetId,
+      details_json: { previousStatus: target.status, newStatus: status }, created_at: nowIso(),
+    }));
+    return json({ success: true, status });
   }
   if (p === "admin/deposits" && method === "GET") {
     const rows = await checked<any[]>(db.from("deposits").select("*").order("created_at", { ascending: false }).limit(300));

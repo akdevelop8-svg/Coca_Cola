@@ -25,7 +25,7 @@ export function LoginPage() {
     e.preventDefault();
     setError('');
     if (!identifier.trim() || !password) {
-      setError('Please enter your phone number and password.');
+      setError('Please enter your phone number or username and password.');
       return;
     }
 
@@ -91,7 +91,7 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Right Sign In Card — ONLY Phone Number & Password */}
+      {/* Phone Number or Username and Password */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-lg border border-slate-200/80 p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
