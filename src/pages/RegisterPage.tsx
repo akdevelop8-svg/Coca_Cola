@@ -24,7 +24,7 @@ function resolveInvitationCode(routerParams: URLSearchParams): string {
   for (const params of candidates) {
     for (const key of INVITATION_QUERY_KEYS) {
       const value = params.get(key)?.trim();
-      if (value) return value.replace(/\\s+/g, '').toUpperCase();
+      if (value) return value.replace(/\s+/g, '').toUpperCase();
     }
   }
 
