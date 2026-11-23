@@ -43,7 +43,7 @@ export function GiftCodePage() {
     void loadGiftCodes();
   }, []);
 
-  const featureEnabled = data ? data.giftCodeEnabled : Boolean(config?.giftCodeEnabled);
+  const featureEnabled = Boolean(data?.giftCodeEnabled ?? config?.giftCodeEnabled);
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
