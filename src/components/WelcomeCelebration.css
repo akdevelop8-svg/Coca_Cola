@@ -1,18 +1,40 @@
 .cc-welcome-overlay {
   isolation: isolate;
-  background: rgba(255, 248, 244, .86);
+  background: rgba(42, 0, 7, .9);
 }
 .cc-welcome-wash {
   background:
-    radial-gradient(circle at 16% 18%, rgba(255, 184, 210, .56) 0, transparent 34%),
-    radial-gradient(circle at 82% 21%, rgba(255, 218, 112, .62) 0, transparent 31%),
-    radial-gradient(circle at 82% 84%, rgba(106, 220, 255, .48) 0, transparent 32%),
-    radial-gradient(circle at 12% 82%, rgba(196, 160, 255, .42) 0, transparent 34%),
-    linear-gradient(135deg, rgba(255, 235, 239, .8), rgba(255, 250, 218, .76), rgba(229, 250, 255, .76));
+    radial-gradient(circle at 15% 16%, rgba(235, 20, 42, .68) 0, transparent 35%),
+    radial-gradient(circle at 84% 17%, rgba(255, 190, 62, .34) 0, transparent 30%),
+    radial-gradient(circle at 82% 82%, rgba(198, 0, 25, .52) 0, transparent 34%),
+    radial-gradient(circle at 12% 84%, rgba(255, 63, 73, .35) 0, transparent 32%),
+    linear-gradient(135deg, rgba(36, 0, 8, .98), rgba(103, 0, 13, .97), rgba(157, 0, 20, .96));
+}
+.cc-welcome-hero {
+  border: 1px solid rgba(255, 220, 153, .88);
+  background: linear-gradient(132deg, #79000d 0%, #b9001b 48%, #e21b2b 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 12px 34px rgba(114,0,13,.28);
+}
+.cc-welcome-product-image {
+  display: block;
+  flex: 0 0 116px;
+  width: 116px;
+  height: 170px;
+  object-fit: cover;
+  object-position: center;
+  border: 2px solid rgba(255,255,255,.95);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(28,0,5,.32), 0 0 0 1px rgba(255,221,156,.7);
+}
+.cc-welcome-pill {
+  border: 1px solid rgba(255, 215, 145, .85);
+  background: linear-gradient(105deg, #8c0010, #d71920);
+  box-shadow: 0 6px 20px rgba(154,0,18,.2);
 }
 .cc-welcome-card {
   animation: ccWelcomeCardIn 560ms cubic-bezier(.18,.82,.22,1) both;
-  box-shadow: 0 30px 100px rgba(145,20,25,.24), 0 0 0 1px rgba(255,255,255,.75), 0 0 54px rgba(248,189,71,.22);
+  box-shadow: 0 30px 100px rgba(35,0,8,.52), 0 0 0 1px rgba(255,215,160,.82), 0 0 60px rgba(215,25,32,.34);
 }
 .cc-welcome-burst {
   animation: ccWelcomeIcon 1.3s ease-in-out infinite;
@@ -22,7 +44,7 @@
   position: absolute;
   width: 1px;
   height: 1px;
-  color: hsl(var(--firework-hue), 98%, 48%);
+  color: hsl(var(--firework-hue), 100%, 64%);
   animation: ccFireworkAppear 2.9s ease-out infinite;
   filter: saturate(1.35);
 }
@@ -55,7 +77,7 @@
   width: 7px;
   height: 12px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #FFF07A, #FF4D80 52%, #8B5CF6);
+  background: linear-gradient(180deg, #fff4c4, #ffcf63 42%, #e21b2b 78%, #8b0012);
   opacity: 0;
   animation-name: ccWelcomeConfetti;
   animation-timing-function: ease-in;
@@ -175,4 +197,15 @@
   }
   .cc-firework-spark { opacity: .45; }
   .cc-welcome-confetti { opacity: .22; }
+}
+
+@media (max-width: 390px) {
+  .cc-welcome-product-image {
+    flex-basis: 96px;
+    width: 96px;
+    height: 148px;
+  }
+  .cc-welcome-hero {
+    gap: 12px;
+  }
 }

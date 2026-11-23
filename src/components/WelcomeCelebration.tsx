@@ -8,24 +8,24 @@ type FlowerBloom = { left: string; top: string; delay: number; hue: number; scal
 type MoneySpark = { left: string; delay: number; duration: number; drift: number };
 
 const FIREWORKS: Firework[] = [
-  { left: '11%', top: '24%', delay: 0.05, hue: 350 },
-  { left: '87%', top: '19%', delay: 0.48, hue: 46 },
-  { left: '20%', top: '69%', delay: 0.92, hue: 190 },
-  { left: '79%', top: '67%', delay: 1.36, hue: 278 },
-  { left: '49%', top: '12%', delay: 1.8, hue: 126 },
-  { left: '61%', top: '78%', delay: 2.24, hue: 25 },
-  { left: '37%', top: '38%', delay: 2.68, hue: 330 },
+  { left: '11%', top: '24%', delay: 0.05, hue: 355 },
+  { left: '87%', top: '19%', delay: 0.48, hue: 42 },
+  { left: '20%', top: '69%', delay: 0.92, hue: 8 },
+  { left: '79%', top: '67%', delay: 1.36, hue: 350 },
+  { left: '49%', top: '12%', delay: 1.8, hue: 45 },
+  { left: '61%', top: '78%', delay: 2.24, hue: 12 },
+  { left: '37%', top: '38%', delay: 2.68, hue: 345 },
 ];
 
 const FLOWERS: FlowerBloom[] = [
-  { left: '4%', top: '48%', delay: 0.05, hue: 342, scale: 0.9 },
+  { left: '4%', top: '48%', delay: 0.05, hue: 355, scale: 0.9 },
   { left: '17%', top: '10%', delay: 0.6, hue: 42, scale: 0.72 },
-  { left: '31%', top: '78%', delay: 1.05, hue: 320, scale: 0.82 },
-  { left: '68%', top: '9%', delay: 1.5, hue: 345, scale: 0.78 },
+  { left: '31%', top: '78%', delay: 1.05, hue: 350, scale: 0.82 },
+  { left: '68%', top: '9%', delay: 1.5, hue: 5, scale: 0.78 },
   { left: '91%', top: '43%', delay: 1.95, hue: 42, scale: 0.95 },
-  { left: '82%', top: '83%', delay: 2.4, hue: 328, scale: 0.7 },
+  { left: '82%', top: '83%', delay: 2.4, hue: 345, scale: 0.7 },
   { left: '7%', top: '84%', delay: 2.85, hue: 48, scale: 0.74 },
-  { left: '94%', top: '9%', delay: 3.3, hue: 345, scale: 0.66 },
+  { left: '94%', top: '9%', delay: 3.3, hue: 355, scale: 0.66 },
 ];
 
 const MONEY_SPARKS: MoneySpark[] = Array.from({ length: 18 }, (_, index) => ({
@@ -163,35 +163,45 @@ export function WelcomeCelebration() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="cc-welcome-title"
-        className="cc-welcome-card relative z-10 w-full max-w-lg overflow-hidden rounded-[30px] border border-white/80 bg-white/95 px-6 pb-7 pt-8 text-center shadow-[0_30px_100px_rgba(145,20,25,0.24)] backdrop-blur-xl sm:px-10"
+        className="cc-welcome-card relative z-10 w-full max-w-lg overflow-hidden rounded-[30px] border border-[#ffd89b] bg-[#fff8f8]/95 px-5 pb-7 pt-8 text-center shadow-[0_30px_100px_rgba(80,0,12,0.5)] backdrop-blur-xl sm:px-8"
       >
         <button
           type="button"
           onClick={close}
           aria-label="Close welcome celebration"
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-red-50 hover:text-[#D71920]"
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-white/95 text-[#B80D13] shadow-sm transition-colors hover:bg-red-50 hover:text-[#7F0010]"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="cc-welcome-burst mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-to-br from-[#FCE7A1] via-[#F9C64D] to-[#E87831] text-white shadow-[0_14px_35px_rgba(217,119,6,0.28)]">
-          <Sparkles className="h-10 w-10" />
+        <div className="cc-welcome-hero mt-2 flex items-center gap-4 rounded-[26px] p-3 text-left sm:gap-5 sm:p-4">
+          <img
+            src="/assets/aistudio/bottles_3242d4ef.jpg"
+            alt="Coca-Cola bottles"
+            className="cc-welcome-product-image"
+            loading="eager"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="cc-welcome-burst mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FFF1BC] via-[#F9C64D] to-[#E87831] text-[#8E0010] shadow-[0_8px_22px_rgba(255,197,65,0.42)]">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/90">
+              Coca-Cola Platform
+            </p>
+            <h2 id="cc-welcome-title" className="mt-2 text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
+              {greeting}
+            </h2>
+            <p className="mt-1 break-words text-xl font-extrabold text-[#FFE39A] sm:text-2xl">
+              {safeName}!
+            </p>
+          </div>
         </div>
-        <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.28em] text-[#C81018]">
-          Coca-Cola Platform
-        </p>
-        <h2 id="cc-welcome-title" className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          {greeting},
-        </h2>
-        <p className="mt-1 break-words text-2xl font-extrabold text-[#D71920] sm:text-3xl">
-          {safeName}!
-        </p>
-        <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
+        <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[#642b35]">
           {isNew
             ? 'We’re delighted you’re here. Your next chapter starts now.'
             : 'It’s great to see you again. Your community and journey are ready for you.'}
         </p>
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-[11px] font-bold text-[#B80D13]">
+        <div className="cc-welcome-pill mt-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-bold text-white">
           <span className="h-2 w-2 rounded-full bg-[#D71920]" />
           {isNew ? 'A fresh start begins' : 'Welcome back to your community'}
         </div>
