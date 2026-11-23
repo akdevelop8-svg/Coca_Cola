@@ -229,3 +229,32 @@
     transform: none !important;
   }
 }
+
+/* Form guidance: make examples easy to see, and clear them as soon as a field is focused. */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="hidden"]),
+  textarea,
+  select {
+    color: #1f2937;
+    color-scheme: light;
+  }
+
+  select option {
+    color: #1f2937;
+    background-color: #ffffff;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #b45309;
+    opacity: 1;
+    font-weight: 700;
+    transition: opacity 120ms ease, color 120ms ease;
+  }
+
+  input:focus::placeholder,
+  textarea:focus::placeholder {
+    color: transparent;
+    opacity: 0;
+  }
+}
