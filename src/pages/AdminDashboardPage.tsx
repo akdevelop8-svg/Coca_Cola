@@ -2164,6 +2164,7 @@ export function AdminDashboardPage() {
                       onChange={(e) => setGcExpiresAt(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                     />
+                    <p className="mt-1 text-[11px] font-semibold text-amber-700">Choose the date and time when this gift code expires.</p>
                   </div>
                 </div>
                 <button
