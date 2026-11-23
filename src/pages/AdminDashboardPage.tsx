@@ -563,11 +563,11 @@ export function AdminDashboardPage() {
       if (gcExpiresAt.trim()) {
         payload.expiresAt = new Date(gcExpiresAt).toISOString();
       }
-      const res = await apiFetch<{ ok: boolean; code: string }>('/api/admin/gift-codes', {
+      const res = await apiFetch<{ success: boolean; giftCode: GiftCodeRecord }>('/api/admin/gift-codes', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      setStatusMsg(`Gift code "${res.code}" created and published.`);
+      setStatusMsg(`Gift code "${res.giftCode.code}" created and published with a reward of ${formatEtb(res.giftCode.rewardAmount)}.`);
       setGcCode('');
       setGcRewardAmount('500');
       setGcMaxRedemptions('');
