@@ -1243,17 +1243,6 @@ async function route(request: Request): Promise<Response> {
     if (status === "suspended" && suspensionReason.length < 8) {
       throw new ApiError("Enter a suspension reason of at least 8 characters.", 400);
     }
-    if (status === "suspended" && targetId === user.id) {
-      throw new ApiError("You cannot suspend your own administrator account.", 403);
-    }
-    if (status === "suspended" && target.role === "owner_admin" && target.status !== "suspended") {
-      const { count, error } = await db.from("users").select("id", { count: "exact", head: true })
-        .eq("role", "owner_admin").eq("status", "active");
-      if (error) throw new ApiError("Administrator safety check failed. Please try again.", 503);
-      if ((count || 0) <= 1) {
-        throw new ApiError("The last active owner administrator cannot be suspended.", 409);
-      }
-    }
     if (target.status === status) return json({ success: true, status });
     await checked(db.from("users").update({ status }).eq("id", targetId));
     await checked(db.from("admin_audit_logs").insert({
