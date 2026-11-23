@@ -39,11 +39,12 @@ interface TeamResponse {
 }
 
 export function TeamPage() {
-  const { user, config } = useAuth();
+  const { user } = useAuth();
   const [data, setData] = useState<TeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1);
   const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null);
+  const [copyError, setCopyError] = useState('');
 
   const [loadError, setLoadError] = useState('');
 
@@ -57,19 +58,40 @@ export function TeamPage() {
   }, []);
 
   const displayName = getCustomerDisplayName(user);
-  const baseOrigin = config?.publicSiteUrl || window.location.origin;
-  const inviteUrl = data
-    ? `${baseOrigin}/register?ref=${encodeURIComponent(data.invitationCode)}`
+  const inviteUrl = data?.invitationCode
+    ? (() => {
+        const url = new URL('/register', window.location.origin);
+        url.searchParams.set('ref', data.invitationCode.trim().toUpperCase());
+        return url.toString();
+      })()
     : '';
 
   const copyText = async (text: string, field: 'code' | 'link') => {
+    setCopyError('');
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      window.setTimeout(() => setCopiedField(null), 2000);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
     } catch {
-      // fallback ignored
+      // Android in-app browsers and non-secure contexts may block Clipboard API.
+      const temporaryInput = document.createElement('textarea');
+      temporaryInput.value = text;
+      temporaryInput.setAttribute('readonly', '');
+      temporaryInput.style.position = 'fixed';
+      temporaryInput.style.opacity = '0';
+      document.body.appendChild(temporaryInput);
+      temporaryInput.select();
+      const copied = document.execCommand('copy');
+      temporaryInput.remove();
+      if (!copied) {
+        setCopyError('Automatic copy was blocked. Please press and hold the referral link above to copy it.');
+        return;
+      }
     }
+    setCopiedField(field);
+    window.setTimeout(() => setCopiedField(null), 2500);
   };
 
   const activeList =
@@ -189,11 +211,9 @@ export function TeamPage() {
                 <Link2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                 <span className="truncate">{inviteUrl || 'Generating...'}</span>
               </p>
-              {!config?.customDomainConfigured && (
-                <p className="text-[11px] text-amber-700 mt-1">
-                  Using active preview origin until custom domain (PUBLIC_SITE_URL) is configured.
-                </p>
-              )}
+              <p className="text-[11px] text-emerald-700 mt-1">
+                Opening this link automatically adds your invitation code to the registration form.
+              </p>
             </div>
             <button
               type="button"
@@ -206,6 +226,9 @@ export function TeamPage() {
             </button>
           </div>
         </div>
+        {copyError && (
+          <p role="alert" className="text-xs text-amber-700">{copyError}</p>
+        )}
 
         {/* Team Details Summary */}
         <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs">
