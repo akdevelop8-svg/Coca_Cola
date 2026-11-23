@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -21,6 +21,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CheckinPage } from './pages/CheckinPage';
 import { GiftCodePage } from './pages/GiftCodePage';
+const UniversePage = lazy(() => import('./pages/UniversePage').then((module) => ({ default: module.UniversePage })));
 import { AchievementCelebration } from './components/AchievementCelebration';
 import { NewCustomerGuide } from './components/NewCustomerGuide';
 
@@ -127,6 +128,16 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <HomePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/universe"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<div className="min-h-[40vh] flex items-center justify-center text-sm font-semibold text-slate-500">Opening your Universe…</div>}>
+                <UniversePage />
+              </Suspense>
             </RequireAuth>
           }
         />
