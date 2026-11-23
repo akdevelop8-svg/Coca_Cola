@@ -62,6 +62,9 @@ async function loginRateKey(scope: string, value: string) {
   );
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
+// Mobile carrier NATs are shared by many customers; retain the strict per-identity limit
+// while allowing a much larger aggregate request budget for a shared public IP.
+const LOGIN_IP_MAX_ATTEMPTS = 300;
 async function consumeLoginLimit(keyHash: string, maxAttempts: number) {
   const rows = await checked<any[]>(
     db.rpc("consume_login_rate_limit", {
@@ -81,15 +84,18 @@ const maskAccount = (value: string) => {
   const digits = String(value || "").replace(/\s/g, "");
   return digits.length <= 4 ? digits : "•••• •••• " + digits.slice(-4);
 };
-const normalizePhone = (value: string) => {
+const normalizePhone = (value: string): string => {
   const s = String(value || "").replace(/[^\d+]/g, "");
-  if (s.startsWith("+251")) return s;
-  if (s.startsWith("251")) return "+" + s;
-  if (s.startsWith("09") && s.length === 10) return "+251" + s.slice(1);
-  if (s.startsWith("9") && s.length === 9) return "+251" + s;
+  if (s.startsWith("00")) return normalizePhone("+" + s.slice(2));
+  if (s.startsWith("+2510") && s.length === 14) return "+251" + s.slice(5);
+  if (s.startsWith("2510") && s.length === 13) return "+251" + s.slice(4);
+  if (s.startsWith("+251") && /^\+251[79]\d{8}$/.test(s)) return s;
+  if (s.startsWith("251") && /^251[79]\d{8}$/.test(s)) return "+" + s;
+  if ((s.startsWith("09") || s.startsWith("07")) && s.length === 10) return "+251" + s.slice(1);
+  if ((s.startsWith("9") || s.startsWith("7")) && s.length === 9) return "+251" + s;
   return s;
 };
-const isPhone = (value: string) => /^\+2519\d{8}$/.test(normalizePhone(value));
+const isPhone = (value: string) => /^\+251[79]\d{8}$/.test(normalizePhone(value));
 const plans = [
   { code: "A", name: "Plan A", investment: 600, dailyMining: 100, periodDays: 365 },
   { code: "B", name: "Plan B", investment: 1500, dailyMining: 200, periodDays: 365 },
@@ -659,7 +665,7 @@ async function route(request: Request): Promise<Response> {
     const identityKey = await loginRateKey("identity", normalizedIdentifier || "empty");
     const ipKey = await loginRateKey("ip", forwardedIp);
     await consumeLoginLimit(identityKey, 5);
-    await consumeLoginLimit(ipKey, 30);
+    await consumeLoginLimit(ipKey, LOGIN_IP_MAX_ATTEMPTS);
 
     let result: any;
     if (isPhoneIdentifier) result = await db.from("users").select("*").eq("phone", normalizedIdentifier).maybeSingle();
@@ -1230,6 +1236,13 @@ async function route(request: Request): Promise<Response> {
       db.from("users").select("id,role,status").eq("id", targetId).maybeSingle(),
     );
     if (!target) throw new ApiError("Account not found.", 404);
+    if (target.role !== "customer") {
+      throw new ApiError("Only customer accounts can be managed from this screen.", 403);
+    }
+    const suspensionReason = String(body.reason || "").trim();
+    if (status === "suspended" && suspensionReason.length < 8) {
+      throw new ApiError("Enter a suspension reason of at least 8 characters.", 400);
+    }
     if (status === "suspended" && targetId === user.id) {
       throw new ApiError("You cannot suspend your own administrator account.", 403);
     }
@@ -1246,7 +1259,12 @@ async function route(request: Request): Promise<Response> {
     await checked(db.from("admin_audit_logs").insert({
       id: uuid("aud_"), actor_user_id: user.id, actor_role: user.role,
       action: "user_status_changed", target_type: "user", target_id: targetId,
-      details_json: { previousStatus: target.status, newStatus: status }, created_at: nowIso(),
+      details_json: {
+        previousStatus: target.status,
+        newStatus: status,
+        ...(status === "suspended" ? { reason: suspensionReason } : {}),
+      },
+      created_at: nowIso(),
     }));
     return json({ success: true, status });
   }
