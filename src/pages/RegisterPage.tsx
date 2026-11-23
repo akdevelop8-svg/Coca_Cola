@@ -8,19 +8,35 @@ import { queueNewCustomerGuide } from '../shared/experience';
 import { isSafeRedirectPath, validateEthiopiaPhone } from '../shared/finance';
 import type { UserProfile } from '../types';
 
+const INVITATION_QUERY_KEYS = ['ref', 'referralCode', 'referral', 'invite', 'invitationCode'] as const;
+
+function resolveInvitationCode(routerParams: URLSearchParams): string {
+  const candidates: URLSearchParams[] = [routerParams];
+
+  if (typeof window !== 'undefined') {
+    candidates.push(new URLSearchParams(window.location.search));
+
+    // Some mobile in-app browsers preserve the invitation query inside the URL hash.
+    const hashQuery = window.location.hash.split('?').slice(1).join('?');
+    if (hashQuery) candidates.push(new URLSearchParams(hashQuery));
+  }
+
+  for (const params of candidates) {
+    for (const key of INVITATION_QUERY_KEYS) {
+      const value = params.get(key)?.trim();
+      if (value) return value.replace(/\\s+/g, '').toUpperCase();
+    }
+  }
+
+  return '';
+}
+
 export function RegisterPage() {
   const { config, setUserState } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const refFromUrl = (
-    searchParams.get('ref') ||
-    searchParams.get('referralCode') ||
-    searchParams.get('referral') ||
-    searchParams.get('invite') ||
-    searchParams.get('invitationCode') ||
-    ''
-  ).trim().toUpperCase();
+  const refFromUrl = resolveInvitationCode(searchParams);
   const redirectTarget = searchParams.get('redirect');
 
   const [phone, setPhone] = useState('+251');
@@ -194,6 +210,7 @@ export function RegisterPage() {
                 <input
                   id="reg-ref"
                   type="text"
+                  autoComplete="off"
                   value={referralCode}
                   onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                   placeholder={refFromUrl ? 'Invitation code added automatically' : 'Open an invitation link to auto-fill'}
