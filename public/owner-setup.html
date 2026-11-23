@@ -4,16 +4,16 @@
 body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f4f6fa;color:#182233;font:16px system-ui}
 main{width:min(100%,520px);padding:28px;background:white;border:1px solid #e4e8ef;border-radius:18px;box-shadow:0 18px 50px #18223312}
 h1{margin:0 0 8px;font-size:25px}p{color:#596579;line-height:1.5}.notice{padding:12px;background:#fff6e7;border:1px solid #f3d9a8;border-radius:10px;font-size:13px}
-label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700}input{width:100%;padding:12px;border:1px solid #cbd3df;border-radius:9px;font:inherit;box-sizing:border-box}
+label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700}input{width:100%;padding:12px;border:1px solid #cbd3df;border-radius:9px;font:inherit;box-sizing:border-box;color:#182233;color-scheme:light}input::placeholder{color:#b45309;opacity:1;font-weight:700;transition:opacity 120ms ease}input:focus::placeholder{color:transparent;opacity:0}
 button{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#c8102e;color:white;font-weight:750;font:inherit}
 </style></head><body><main>
 <h1>Set up the platform owner</h1><p>Create the first owner administrator account. This setup token works once only.</p>
 <div class="notice">Use a strong, unique password of at least 12 characters. Do not share this page or the one-time token with anyone.</div>
 <form action="/api/auth/bootstrap-owner" method="post" enctype="application/x-www-form-urlencoded">
-<label for="fullName">Full name</label><input id="fullName" name="fullName" required minlength="2">
+<label for="fullName">Full name</label><input id="fullName" name="fullName" placeholder="e.g., Platform Owner" required minlength="2">
 <label for="phone">Ethiopian phone number</label><input id="phone" name="phone" placeholder="+2519XXXXXXXX" required>
 <label for="username">Username</label><input id="username" name="username" value="owner" required minlength="3">
-<label for="password">New password (12+ characters)</label><input id="password" name="password" type="password" required minlength="12">
-<label for="bootstrapToken">One-time setup token</label><input id="bootstrapToken" name="bootstrapToken" type="password" required minlength="32">
+<label for="password">New password (12+ characters)</label><input id="password" name="password" type="password" placeholder="Enter a strong password (12+ characters)" required minlength="12">
+<label for="bootstrapToken">One-time setup token</label><input id="bootstrapToken" name="bootstrapToken" type="password" placeholder="Paste your one-time setup token" required minlength="32">
 <button type="submit">Create owner account</button></form>
 </main></body></html>
