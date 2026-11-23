@@ -811,6 +811,7 @@ export function AdminDashboardPage() {
                   onChange={(e) => setFromDate(e.target.value)}
                   className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
                 />
+                <p className="mt-1 text-[11px] font-semibold text-amber-700">Choose the first date in the reporting period.</p>
               </div>
               <div>
                 <label htmlFor="ov-to" className="block text-xs text-slate-500 mb-1">To Date</label>
@@ -821,6 +822,7 @@ export function AdminDashboardPage() {
                   onChange={(e) => setToDate(e.target.value)}
                   className="px-3 py-2 rounded-xl border border-slate-300 text-xs"
                 />
+                <p className="mt-1 text-[11px] font-semibold text-amber-700">Choose the last date in the reporting period.</p>
               </div>
               <button
                 type="button"
@@ -908,7 +910,7 @@ export function AdminDashboardPage() {
                   aria-label="Search customers by phone or referral code"
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Phone or referral code..."
+                  placeholder="e.g., +251911223344 or COLA12345"
                   className="flex-1 sm:w-64 px-3.5 py-2 rounded-xl border border-slate-300 text-sm"
                 />
                 <button
@@ -1400,7 +1402,7 @@ export function AdminDashboardPage() {
                       onChange={(e) =>
                         setTicketReplies((p) => ({ ...p, [t.id]: e.target.value }))
                       }
-                      placeholder="Write admin reply..."
+                      placeholder="e.g., Thank you for contacting us. We will review your request."
                       className="flex-1 min-w-[200px] px-3 py-2 rounded-xl border border-slate-300 text-xs"
                     />
                     <button
@@ -1660,21 +1662,21 @@ export function AdminDashboardPage() {
                   type="text"
                   value={pmAcctName}
                   onChange={(e) => setPmAcctName(e.target.value)}
-                  placeholder="Account Holder / Label"
+                  placeholder="e.g., Commercial Bank of Ethiopia"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
                 />
                 <input
                   type="text"
                   value={pmAcctNum}
                   onChange={(e) => setPmAcctNum(e.target.value)}
-                  placeholder="Account Number / Code"
+                  placeholder="e.g., 1000XXXXXXXX"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono"
                   required
                 />
                 <textarea
                   value={pmInstructions}
                   onChange={(e) => setPmInstructions(e.target.value)}
-                  placeholder="Instructions displayed to customers"
+                  placeholder="e.g., Transfer to this account, then submit your receipt."
                   rows={3}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
                 />
@@ -1708,7 +1710,7 @@ export function AdminDashboardPage() {
                                     aria-label="Edit method name"
                                     value={editForm.name}
                                     onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                                    placeholder="Method Name"
+                                    placeholder="e.g., CBE or Telebirr"
                                     className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white"
                                   />
                                   <input
@@ -1716,7 +1718,7 @@ export function AdminDashboardPage() {
                                     aria-label="Edit account number"
                                     value={editForm.accountNumber}
                                     onChange={(e) => setEditForm((f) => ({ ...f, accountNumber: e.target.value }))}
-                                    placeholder="Account Number"
+                                    placeholder="e.g., 1000XXXXXXXX"
                                     className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white"
                                   />
                                 </div>
@@ -1725,7 +1727,7 @@ export function AdminDashboardPage() {
                                   aria-label="Edit account holder"
                                   value={editForm.accountName}
                                   onChange={(e) => setEditForm((f) => ({ ...f, accountName: e.target.value }))}
-                                  placeholder="Account Holder Name"
+                                  placeholder="e.g., AK Trading"
                                   className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white"
                                 />
                                 <textarea
@@ -1733,7 +1735,7 @@ export function AdminDashboardPage() {
                                   value={editForm.instructions}
                                   onChange={(e) => setEditForm((f) => ({ ...f, instructions: e.target.value }))}
                                   rows={2}
-                                  placeholder="Customer instructions"
+                                  placeholder="e.g., Include your transfer reference when submitting proof."
                                   className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white"
                                 />
                                 <div className="flex gap-2 justify-end">
@@ -1845,6 +1847,7 @@ export function AdminDashboardPage() {
                           onChange={(e) => setSettingsForm({ ...settingsForm, withdrawalStartTime: e.target.value })}
                           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
                         />
+                        <p className="mt-1 text-[11px] font-semibold text-amber-700">Example: 04:00 (24-hour Ethiopian clock)</p>
                       </div>
                       <div>
                         <label htmlFor="set-withdrawal-end" className="mb-1 block text-xs font-semibold text-slate-600">
@@ -1859,6 +1862,7 @@ export function AdminDashboardPage() {
                           onChange={(e) => setSettingsForm({ ...settingsForm, withdrawalEndTime: e.target.value })}
                           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
                         />
+                        <p className="mt-1 text-[11px] font-semibold text-amber-700">Example: 11:00 (24-hour Ethiopian clock)</p>
                       </div>
                     </div>
                     <p className="text-xs font-semibold text-[#9E1720]">
@@ -1873,6 +1877,7 @@ export function AdminDashboardPage() {
                       <input
                         id="set-min-w"
                         type="number"
+                        placeholder="e.g., 150"
                         value={settingsForm.minWithdrawal}
                         onChange={(e) =>
                           setSettingsForm({ ...settingsForm, minWithdrawal: Number(e.target.value) })
@@ -1887,6 +1892,7 @@ export function AdminDashboardPage() {
                       <input
                         id="set-fee-w"
                         type="number"
+                        placeholder="e.g., 20"
                         value={settingsForm.withdrawalFeePercent}
                         onChange={(e) =>
                           setSettingsForm({
@@ -1904,6 +1910,7 @@ export function AdminDashboardPage() {
                       <input
                         id="set-plim"
                         type="number"
+                        placeholder="e.g., 1"
                         value={settingsForm.purchaseLimit}
                         onChange={(e) =>
                           setSettingsForm({ ...settingsForm, purchaseLimit: Number(e.target.value) })
@@ -1918,6 +1925,7 @@ export function AdminDashboardPage() {
                       <input
                         id="set-regb"
                         type="number"
+                        placeholder="e.g., 150"
                         value={settingsForm.registrationBonus}
                         onChange={(e) =>
                           setSettingsForm({
@@ -2005,7 +2013,7 @@ export function AdminDashboardPage() {
                       type="text"
                       value={chLabel}
                       onChange={(e) => setChLabel(e.target.value)}
-                      placeholder="Channel Label"
+                      placeholder="e.g., Customer Support"
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                       required
                     />
@@ -2013,7 +2021,7 @@ export function AdminDashboardPage() {
                       type="text"
                       value={chHandle}
                       onChange={(e) => setChHandle(e.target.value)}
-                      placeholder="Display Handle or URL"
+                      placeholder="e.g., @Coca_cola_Customer_service1"
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                       required
                     />
@@ -2141,7 +2149,7 @@ export function AdminDashboardPage() {
                       step="1"
                       value={gcMaxRedemptions}
                       onChange={(e) => setGcMaxRedemptions(e.target.value)}
-                      placeholder="Unlimited"
+                      placeholder="e.g., 100 (leave blank for unlimited)"
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
                     />
                   </div>
@@ -2156,6 +2164,7 @@ export function AdminDashboardPage() {
                       onChange={(e) => setGcExpiresAt(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
                     />
+                    <p className="mt-1 text-[11px] font-semibold text-amber-700">Choose the date and time when this gift code expires.</p>
                   </div>
                 </div>
                 <button
