@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { CinematicAuthHero } from '../components/CinematicAuthHero';
 import { isSafeRedirectPath } from '../shared/finance';
 import { isAdminRole } from '../shared/roles';
+import { triggerWelcomeCelebration } from '../shared/welcome';
 import type { UserProfile } from '../types';
 
 export function LoginPage() {
@@ -46,6 +47,7 @@ export function LoginPage() {
         return;
       }
 
+      triggerWelcomeCelebration('login', res.user.displayName || res.user.fullName || '');
       const safeNext = isSafeRedirectPath(redirectTarget);
       if (!res.user.termsAcceptedVersion) {
         const nextParam = redirectTarget ? `?redirect=${encodeURIComponent(safeNext)}` : '';
@@ -61,7 +63,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] flex flex-col lg:flex-row">
+    <div className="cc-site-backdrop min-h-screen flex flex-col lg:flex-row">
       <CinematicAuthHero
         imageSrc="/assets/aistudio/bottles_3242d4ef.jpg"
         imageAlt="Coca-Cola bottle collection"

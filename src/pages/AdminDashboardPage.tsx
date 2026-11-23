@@ -50,6 +50,26 @@ type AdminTab =
   | 'gift_codes'
   | 'audit';
 
+const parseClockMinutes = (value: string) => {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const formatClock12 = (totalMinutes: number) => {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
+};
+
+const withdrawalWindowLabel = (start: string, end: string) => {
+  const startMinutes = parseClockMinutes(start);
+  const endMinutes = parseClockMinutes(end);
+  if (startMinutes === null || endMinutes === null) return 'Enter a valid start and end time.';
+  return `${formatClock12(startMinutes)}–${formatClock12(endMinutes)} Ethiopian clock (${formatClock12(startMinutes + 360)}–${formatClock12(endMinutes + 360)} EAT)`;
+};
+
 export function AdminDashboardPage() {
   const { user, config, refreshConfig } = useAuth();
   const location = useLocation();
@@ -488,6 +508,16 @@ export function AdminDashboardPage() {
     e.preventDefault();
     setErrorMsg('');
     setStatusMsg('');
+    const withdrawalStart = String(settingsForm?.withdrawalStartTime ?? '04:00');
+    const withdrawalEnd = String(settingsForm?.withdrawalEndTime ?? '11:00');
+    if (
+      parseClockMinutes(withdrawalStart) === null ||
+      parseClockMinutes(withdrawalEnd) === null ||
+      withdrawalStart === withdrawalEnd
+    ) {
+      setErrorMsg('Enter valid Ethiopian-clock withdrawal times. Start and end times must be different.');
+      return;
+    }
     try {
       await apiFetch('/api/admin/settings', {
         method: 'PUT',
@@ -1786,6 +1816,55 @@ export function AdminDashboardPage() {
                   <h3 className="font-bold text-sm text-slate-900">
                     Withdrawal Limits &amp; Platform Policy Settings
                   </h3>
+                  <section className="rounded-2xl border border-red-200 bg-red-50/70 p-4 space-y-3">
+                    <label className="flex items-start gap-3 text-sm text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={settingsForm.withdrawalEnabled !== false}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, withdrawalEnabled: e.target.checked })}
+                        className="mt-0.5 h-4 w-4 accent-[#D71920]"
+                      />
+                      <span>
+                        <strong className="block">Enable customer withdrawals</strong>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
+                          Turning this off blocks new customer withdrawal requests. Existing requests remain available for review and processing.
+                        </span>
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="set-withdrawal-start" className="mb-1 block text-xs font-semibold text-slate-600">
+                          Opens (Ethiopian clock)
+                        </label>
+                        <input
+                          id="set-withdrawal-start"
+                          type="time"
+                          step={60}
+                          required
+                          value={settingsForm.withdrawalStartTime || '04:00'}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, withdrawalStartTime: e.target.value })}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="set-withdrawal-end" className="mb-1 block text-xs font-semibold text-slate-600">
+                          Closes (Ethiopian clock)
+                        </label>
+                        <input
+                          id="set-withdrawal-end"
+                          type="time"
+                          step={60}
+                          required
+                          value={settingsForm.withdrawalEndTime || '11:00'}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, withdrawalEndTime: e.target.value })}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs font-semibold text-[#9E1720]">
+                      Customer schedule: {withdrawalWindowLabel(settingsForm.withdrawalStartTime || '04:00', settingsForm.withdrawalEndTime || '11:00')}
+                    </p>
+                  </section>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="set-min-w" className="block text-xs text-slate-500 mb-1">

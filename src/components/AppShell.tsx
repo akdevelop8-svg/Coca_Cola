@@ -4,6 +4,7 @@ import {
   Bell,
   Briefcase,
   CreditCard,
+  Globe,
   Headphones,
   Home,
   Info,
@@ -33,6 +34,7 @@ const MAIN_NAV: NavItem[] = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/income', label: 'Income', icon: TrendingUp },
   { to: '/team', label: 'Team', icon: Users },
+  { to: '/community', label: 'Community', icon: Globe },
   { to: '/task', label: 'Task', icon: Trophy },
   { to: '/recharge', label: 'Recharge', icon: Wallet },
   { to: '/withdraw', label: 'Withdraw', icon: CreditCard },
@@ -72,7 +74,7 @@ export function AppShell({
   const displayName = getCustomerDisplayName(user);
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] text-[#111827] flex">
+    <div className="cc-site-backdrop min-h-screen text-white flex">
       {/* Desktop Fixed Left Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-gradient-to-b from-[#C81018] via-[#A3080C] to-[#7A0407] text-white z-30 shadow-xl">
         <div className="px-5 py-5 flex items-center justify-center border-b border-white/15">
@@ -204,21 +206,21 @@ export function AppShell({
       {/* Main Content Wrapper */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between gap-4">
+        <header className="sticky top-0 z-20 h-14 sm:h-16 bg-gradient-to-r from-[#870009]/98 via-[#B80D13]/96 to-[#D71920]/95 backdrop-blur-md border-b border-white/20 shadow-lg shadow-[#5b0008]/20 px-3 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label="Open menu"
-              className="lg:hidden min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="lg:hidden min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-white hover:bg-white/15 cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
             <div className="lg:hidden">
-              <CocaColaScriptLogo color="#D71920" className="h-7" />
+              <CocaColaScriptLogo color="#FFFFFF" className="h-7" />
             </div>
             {title && (
-              <h1 className="hidden lg:block text-base font-bold text-slate-900 truncate">
+              <h1 className="hidden lg:block text-base font-bold text-white truncate">
                 {title}
               </h1>
             )}
@@ -229,7 +231,7 @@ export function AppShell({
               type="button"
               onClick={() => navigate('/notifications')}
               aria-label={`Notifications (${unreadNotifications} unread)`}
-              className="relative min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="relative min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-white hover:bg-white/15 cursor-pointer"
             >
               <Bell className="w-5 h-5" />
               {unreadNotifications > 0 && (
@@ -243,14 +245,14 @@ export function AppShell({
               type="button"
               onClick={() => navigate('/my')}
               aria-label="Open My Account"
-              className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-white/15 transition-colors cursor-pointer"
             >
               <UserAvatar fullName={displayName} avatarUrl={user?.avatarUrl} size="sm" />
               <div className="hidden sm:block text-left leading-tight">
-                <p data-testid="header-display-name" className="text-xs font-semibold text-slate-900 max-w-[130px] truncate">
+                <p data-testid="header-display-name" className="text-xs font-semibold text-white max-w-[130px] truncate">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-slate-500 font-mono">
+                <p className="text-[11px] text-white/75 font-mono">
                   {user?.referralCode || ''}
                 </p>
               </div>
@@ -263,7 +265,7 @@ export function AppShell({
           {children}
           <ColaRiverAccent />
           {config?.settings?.privacyPolicyUrl && (
-            <footer className="mt-6 border-t border-slate-200 pt-4 pb-2 text-center text-xs text-slate-500">
+            <footer className="mt-6 border-t border-white/25 pt-4 pb-2 text-center text-xs text-white/75">
               <a
                 href={config.settings.privacyPolicyUrl}
                 target="_blank"
@@ -280,7 +282,7 @@ export function AppShell({
       {/* Fixed Bottom Navigation (Mobile & Tablet) */}
       <nav
         aria-label="Mobile Bottom Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 h-16 px-2 grid grid-cols-5 items-center"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-r from-[#870009]/98 via-[#B80D13]/97 to-[#D71920]/96 backdrop-blur-md border-t border-white/25 shadow-[0_-8px_28px_rgba(55,0,5,0.22)] h-16 px-2 grid grid-cols-5 items-center"
       >
         {MOBILE_BOTTOM_NAV.map((item) => {
           const Icon = item.icon;
@@ -290,7 +292,7 @@ export function AppShell({
               to={item.to}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition-colors ${
-                  isActive ? 'text-[#D71920] font-semibold' : 'text-slate-500 hover:text-slate-800'
+                  isActive ? 'text-[#FFE7A6] font-bold' : 'text-white/75 hover:text-white'
                 }`
               }
             >

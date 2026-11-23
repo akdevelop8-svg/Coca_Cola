@@ -346,6 +346,9 @@ export interface PlatformConfig {
     depositCbeAccountName: string;
     depositCbeAccountNumber: string;
     withdrawalMethodOnly: string;
+    withdrawalEnabled: boolean;
+    withdrawalStartTime: string;
+    withdrawalEndTime: string;
     maintenanceMode: boolean;
   };
   activeDepositMethods?: PaymentMethodRecord[];
