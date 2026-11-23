@@ -146,6 +146,7 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("GIFT_CODE_INVALID")) throw new ApiError("Gift code is invalid or inactive.", 404);
     if (message.includes("GIFT_CODE_ALREADY_REDEEMED")) throw new ApiError("You have already redeemed this gift code.", 409);
     if (message.includes("GIFT_CODE_EXPIRED")) throw new ApiError("This gift code has expired.", 400);
+    if (message.includes("GIFT_CODE_REDEMPTION_LIMIT_REACHED")) throw new ApiError("This gift code has reached its redemption limit.", 409);
     if (message.includes("GIFT_CODES_DISABLED")) throw new ApiError("Gift codes are currently disabled.", 503);
     if (message.includes("deposits_tx_reference_normalized_uidx")) {
       throw new ApiError("This bank transaction reference has already been submitted. Check your deposit history before submitting again.", 409);
@@ -1124,11 +1125,19 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "gift-codes" && method === "GET") {
-    const rows = await checked<any[]>(db.from("gift_code_redemptions").select("*").eq("user_id", user.id).order("redeemed_at", { ascending: false }));
-    return json({ redemptions: rows.map((x: any) => ({
-      id: x.id, giftCodeId: x.gift_code_id, code: x.code_snapshot,
-      rewardAmount: Number(x.reward_amount), redeemedAt: x.redeemed_at,
-    })) });
+    const [rows, setting, wallet] = await Promise.all([
+      checked<any[]>(db.from("gift_code_redemptions").select("*").eq("user_id", user.id).order("redeemed_at", { ascending: false })),
+      checked<any>(db.from("gift_code_settings").select("is_enabled").eq("id", "default").maybeSingle()),
+      getBalances(user.id),
+    ]);
+    return json({
+      giftCodeEnabled: setting?.is_enabled === 1,
+      availableBalance: wallet.availableBalance,
+      redemptions: rows.map((x: any) => ({
+        id: x.id, giftCodeId: x.gift_code_id, code: x.code_snapshot,
+        rewardAmount: Number(x.reward_amount), redeemedAt: x.redeemed_at,
+      })),
+    });
   }
   if (p === "gift-codes/redeem" && method === "POST") {
     const result = await checked<any>(db.rpc("redeem_gift_code_atomic", {
