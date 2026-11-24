@@ -54,13 +54,13 @@ export function MyAccountPage() {
     ...(giftCodeEnabled
       ? [{ label: 'Gift Code', icon: Gift, action: () => navigate('/gift-code'), testId: 'my-gift-code-btn' }]
       : []),
-    { label: 'All Records & History', icon: FileText, action: () => navigate('/income') },
+    { label: 'History', icon: FileText, action: () => navigate('/income') },
     { label: 'Recharge Records', icon: Wallet, action: () => navigate('/recharge') },
-    { label: 'Withdrawal Records', icon: CreditCard, action: () => navigate('/withdraw') },
-    { label: 'Bank Account Management', icon: Landmark, action: () => navigate('/my/bank-account') },
+    { label: 'Withdrawals', icon: CreditCard, action: () => navigate('/withdraw') },
+    { label: 'Payout Account', icon: Landmark, action: () => navigate('/my/bank-account') },
     { label: 'About Us', icon: Info, action: () => navigate('/about') },
     { label: 'Platform Rules', icon: ScrollText, action: () => setRulesModal(true) },
-    { label: 'Customer Service', icon: Headphones, action: () => navigate('/service') },
+    { label: 'Support', icon: Headphones, action: () => navigate('/service') },
   ];
 
   return (
@@ -84,7 +84,7 @@ export function MyAccountPage() {
                   className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-300 text-[#7A0407] text-xs font-bold cursor-pointer"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Open Admin Dashboard</span>
+                  <span>Admin</span>
                 </button>
               )}
             </div>
@@ -92,19 +92,19 @@ export function MyAccountPage() {
 
           <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-white/12 rounded-2xl p-3 text-center">
             <div>
-              <p className="text-[11px] text-white/80">Account Balance</p>
+              <p className="text-[11px] text-white/80">Balance</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatEtb(summary?.availableBalance ?? 0)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-white/80">Total Rewards</p>
+              <p className="text-[11px] text-white/80">Rewards</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatEtb(summary?.totalRewards ?? 0)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-white/80">Team Commission</p>
+              <p className="text-[11px] text-white/80">Team Earnings</p>
               <p className="text-xs sm:text-sm font-extrabold tabular-nums">
                 {formatEtb(summary?.teamCommission ?? 0)}
               </p>
@@ -179,18 +179,18 @@ export function MyAccountPage() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Wallet &amp; Platform Rules</h3>
+              <h3 className="text-base font-bold text-slate-900">Wallet Rules</h3>
               <button type="button" onClick={() => setRulesModal(false)} className="cursor-pointer">
                 <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
             <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
-              <p><strong>Terms Version Accepted:</strong> {user?.termsAcceptedVersion || 'Pending'}</p>
+              <p><strong>Terms:</strong> {user?.termsAcceptedVersion || 'Pending'}</p>
               <p><strong>Currency:</strong> ETB wallet balance</p>
               <p><strong>Registration Bonus:</strong> {config?.settings.registrationBonus ?? 150} ETB</p>
-              <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (first claim after 24 hours, then every 24 hours)</p>
-              <p><strong>Active Plan Limit:</strong> Maximum {MAX_ACTIVE_PLANS} active plans (first mining claim after 24 hours, then every 24 hours)</p>
-              <p><strong>Referral Rewards:</strong> Level 1: {config?.settings.referralLevel1Percent ?? 20}%, Level 2: {config?.settings.referralLevel2Percent ?? 2}%, Level 3: {config?.settings.referralLevel3Percent ?? 1}%</p>
+              <p><strong>Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (first claim after 24h, then every 24h)</p>
+              <p><strong>Active Plans:</strong> Max {MAX_ACTIVE_PLANS} (first claim after 24h, then every 24h)</p>
+              <p><strong>Referrals:</strong> Level 1: {config?.settings.referralLevel1Percent ?? 20}%, Level 2: {config?.settings.referralLevel2Percent ?? 2}%, Level 3: {config?.settings.referralLevel3Percent ?? 1}%</p>
             </div>
           </div>
         </div>
