@@ -79,7 +79,7 @@ export function GiftCodePage() {
   };
 
   return (
-    <AppShell title="Gift Code Redemption">
+    <AppShell title="Gift Code">
       <div className="max-w-2xl mx-auto space-y-5">
         {/* Header Card */}
         <section className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#D71920] to-[#98080D] text-white p-5 sm:p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
@@ -88,14 +88,14 @@ export function GiftCodePage() {
               <Gift className="w-6 h-6 text-amber-300" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Gift Code Redemption</h2>
+              <h2 className="text-xl font-bold">Gift Code</h2>
               <p className="text-xs sm:text-sm text-white/85">
                 Redeem valid gift codes for ETB wallet rewards
               </p>
             </div>
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2 text-right">
-            <p className="text-[11px] text-white/80">Wallet Balance</p>
+            <p className="text-[11px] text-white/80">Balance</p>
             <p data-testid="gift-wallet-balance" className="text-base font-extrabold tabular-nums">
               {loading ? '...' : formatEtb(data?.availableBalance ?? 0)}
             </p>
@@ -106,9 +106,9 @@ export function GiftCodePage() {
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-amber-200 p-6 text-center space-y-4 shadow-xs">
             <ShieldAlert className="w-10 h-10 text-amber-600 mx-auto" />
             <div>
-              <h3 className="text-base font-bold text-slate-900">Gift Code Feature Disabled</h3>
+              <h3 className="text-base font-bold text-slate-900">Gift Codes Disabled</h3>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                Gift Code redemptions are currently disabled by the Administrator.
+                Gift codes are disabled.
               </p>
             </div>
             <button
@@ -117,13 +117,13 @@ export function GiftCodePage() {
               className="px-5 py-2.5 rounded-full bg-[#D71920] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Return to Dashboard</span>
+              <span>Home</span>
             </button>
           </div>
         ) : (
           <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-4">
             <p className="text-xs text-slate-600">
-              Enter your promotional Gift Code below to add <strong>ETB</strong> to your Wallet. Each code can be redeemed once per customer.
+              Enter your gift code. Each code works once per customer.
             </p>
 
             {successMsg && (
@@ -149,7 +149,7 @@ export function GiftCodePage() {
                   type="text"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                  placeholder="Enter gift code (e.g. COLA2026)"
+                  placeholder="Gift code"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
                   required
                 />
@@ -175,7 +175,7 @@ export function GiftCodePage() {
           {loading ? (
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
           ) : !data?.redemptions.length ? (
-            <p className="p-6 text-center text-sm text-slate-500">No gift codes redeemed yet.</p>
+            <p className="p-6 text-center text-sm text-slate-500">No redemptions yet.</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {data.redemptions.map((r) => (
