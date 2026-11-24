@@ -165,10 +165,10 @@ export function CheckinPage() {
           </button>
         </section>
 
-        {/* Check-In History */}
+        {/* History */}
         <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-slate-900 text-white px-5 py-3.5 text-sm font-bold">
-            Check-In History
+            History
           </div>
           {loading ? (
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
