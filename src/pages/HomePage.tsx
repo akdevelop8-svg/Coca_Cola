@@ -51,7 +51,7 @@ export function HomePage() {
     : [
         {
           id: 'default-1',
-          title: 'Invest Today — Build a Better Tomorrow',
+          title: 'Invest Today',
           subtitle: 'Together for a Prosperous Future',
           imageUrl: SUPPLIED_ASSETS.splashDrinkHero,
           isActive: true,
@@ -59,16 +59,16 @@ export function HomePage() {
         },
         {
           id: 'default-2',
-          title: 'Coca-Cola Original Taste Collection',
-          subtitle: 'Iconic beverage products enjoyed globally',
+          title: 'Coca-Cola Collection',
+          subtitle: 'Iconic beverages',
           imageUrl: SUPPLIED_ASSETS.bottles,
           isActive: true,
           sortOrder: 2,
         },
         {
           id: 'default-3',
-          title: 'Modern Bottling & Production Operations',
-          subtitle: 'High-capacity bottling infrastructure',
+          title: 'Bottling Operations',
+          subtitle: 'Modern production',
           imageUrl: SUPPLIED_ASSETS.factory,
           isActive: true,
           sortOrder: 3,
@@ -182,10 +182,7 @@ export function HomePage() {
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-balance">
                 Invest Today <span className="text-amber-300">Build a Better Tomorrow</span>
               </h2>
-              <p className="mt-2 text-sm sm:text-base text-white/90">
-                Together for a Prosperous Future
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() =>
@@ -193,7 +190,7 @@ export function HomePage() {
                   }
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#D71920] font-bold text-sm shadow-md hover:bg-red-50 transition-colors cursor-pointer"
                 >
-                  <span>Start Investing</span>
+                  <span>Start</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <span className="text-xs text-white/85">{activeSlide.subtitle}</span>
@@ -283,7 +280,7 @@ export function HomePage() {
                 onClick={() => navigate('/income')}
                 className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 cursor-pointer"
               >
-                View Details
+                View
               </button>
             </div>
             <div className="mt-3">
@@ -304,7 +301,7 @@ export function HomePage() {
                 onClick={() => navigate('/team')}
                 className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold hover:bg-purple-100 cursor-pointer"
               >
-                View Team
+                Team
               </button>
             </div>
             <div className="mt-3">
@@ -407,7 +404,7 @@ export function HomePage() {
         </section>
 
         {/* D. PLATFORM REWARDS & EARNINGS OVERVIEW */}
-        <section aria-label="Platform Rewards and Earnings Overview" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <section aria-label="Rewards" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-50 text-[#D71920] flex items-center justify-center shrink-0">
               <Gift className="w-5 h-5" />
@@ -477,14 +474,14 @@ export function HomePage() {
               onClick={() => navigate('/income')}
               className="px-3 py-1 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <span>My Purchased Plans</span>
+              <span>My Plans</span>
               <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
 
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
             <span>
-              Plans are purchased from your available ETB wallet balance (max {MAX_ACTIVE_PLANS} active plans; each mining claim unlocks every 24 hours).
+              Buy with wallet balance · Max {MAX_ACTIVE_PLANS} active · claim every 24h.
             </span>
             <span className="font-semibold text-slate-900 tabular-nums">
               Available: {formatEtb(summary?.availableBalance ?? 0)}
@@ -523,13 +520,13 @@ export function HomePage() {
 
                   <div className="space-y-1.5 text-xs">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Investment:</span>
+                      <span className="text-slate-500">Cost:</span>
                       <span className="font-bold text-slate-900 tabular-nums text-right">
                         {formatEtb(plan.investment)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">Daily Mining:</span>
+                      <span className="text-slate-500">Daily:</span>
                       <span className="font-bold text-[#D71920] tabular-nums text-right">
                         {formatEtb(plan.dailyMining)}
                       </span>
@@ -578,17 +575,17 @@ export function HomePage() {
             <div className="p-5 space-y-4 text-sm">
               <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2">
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Selected Plan</span>
+                  <span className="text-slate-500">Plan</span>
                   <strong>{selectedPlan.name}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Amount to Deduct</span>
+                  <span className="text-slate-500">Cost</span>
                   <strong className="tabular-nums text-slate-900">
                     {formatEtb(selectedPlan.investment)}
                   </strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Daily Mining (Manual Claim)</span>
+                  <span className="text-slate-500">Daily Claim</span>
                   <strong className="text-[#D71920] tabular-nums">
                     {formatEtb(selectedPlan.dailyMining)} / day
                   </strong>
@@ -598,11 +595,11 @@ export function HomePage() {
                   <strong>{selectedPlan.periodDays} Days</strong>
                 </div>
                 <div className="flex justify-between gap-2 pt-2 border-t border-slate-200">
-                  <span className="text-slate-500">Your Wallet Balance</span>
+                  <span className="text-slate-500">Wallet</span>
                   <strong className="tabular-nums">{formatEtb(summary?.availableBalance ?? 0)}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Active Plans Held</span>
+                  <span className="text-slate-500">Active Plans</span>
                   <strong>
                     {summary?.activePlansCount ?? 0} / {MAX_ACTIVE_PLANS}
                   </strong>
@@ -610,7 +607,7 @@ export function HomePage() {
               </div>
 
               <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                <strong>Wallet note:</strong> Balances reflect posted wallet transactions. Daily rewards must be claimed manually on the Income page.
+                <strong>Wallet:</strong> Rewards post after a manual claim on Income.
               </div>
 
               {purchaseResult && (
@@ -643,7 +640,7 @@ export function HomePage() {
                     }}
                     className="flex-1 py-2.5 rounded-full bg-emerald-600 text-white font-semibold text-sm cursor-pointer"
                   >
-                    Open Income Page
+                    Income
                   </button>
                 ) : (
                   <button
