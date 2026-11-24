@@ -152,9 +152,6 @@ const companyInfo = {
   authorizationDisclosure: "Any brand, sponsorship, or authorization statement must be supported by current written permission before publication.",
 };
 
-const ethiopiaDateOf = (date: Date) => new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Africa/Addis_Ababa", year: "numeric", month: "2-digit", day: "2-digit",
-}).format(date);
 async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status = 400): Promise<T> {
   const result = await promise;
   if (result.error) {
