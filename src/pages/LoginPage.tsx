@@ -67,13 +67,13 @@ export function LoginPage() {
       <CinematicAuthHero
         imageSrc="/assets/aistudio/bottles_3242d4ef.jpg"
         imageAlt="Coca-Cola bottle collection"
-        eyebrow="Your platform, beautifully connected"
+        eyebrow="YOUR PLATFORM"
         title={<>Invest Today <span className="text-amber-200">Build a Better Tomorrow</span></>}
-        description="Welcome back. Sign in to explore your dashboard, purchased plans, daily claims and account activity."
-        footer="Secure sign-in · Ethiopia (+251)"
+        description="Sign in to view your plans and wallet."
+        footer="Secure · +251"
       />
 
-      {/* Phone Number or Username and Password */}
+      {/* Phone or Username and Password */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-lg border border-slate-200/80 p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
@@ -101,7 +101,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="login-identifier" className="block text-sm font-medium text-slate-700 mb-1.5">
-                Phone Number or Username
+                Phone or Username
               </label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -130,7 +130,7 @@ export function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   className="w-full pl-10 pr-11 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
                   required
                 />
