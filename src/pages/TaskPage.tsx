@@ -143,7 +143,7 @@ export function TaskPage() {
         {/* 5 Level Milestone Cards in 2-Column Grid */}
         <section aria-label="Team deposit reward levels" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           {(data?.valueTasks || []).map((task) => {
-            const canClaimNow = task.eligible && !task.claimed;
+            const canClaimNow = task.enabled !== false && task.eligible && !task.claimed;
             const isClaiming = claimingId === task.id;
             return (
               <div
@@ -172,7 +172,7 @@ export function TaskPage() {
                         : 'bg-slate-100 text-slate-500 border border-slate-200/70'
                     }`}
                   >
-                    {task.claimed ? 'Claimed' : canClaimNow ? 'Ready to Claim' : 'Locked'}
+                    {task.claimed ? 'Claimed' : task.enabled === false ? 'Disabled by Admin' : canClaimNow ? 'Ready to Claim' : 'Locked'}
                   </span>
                 </div>
 

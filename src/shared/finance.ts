@@ -384,6 +384,7 @@ export interface TeamTaskLevelDef {
 }
 
 export interface TeamTaskLevelProgress extends TeamTaskLevelDef {
+  enabled?: boolean;
   progress: number;
   remaining: number;
   percent: number;

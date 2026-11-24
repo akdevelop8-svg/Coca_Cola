@@ -7,6 +7,9 @@ import { celebrateAchievement } from '../shared/experience';
 
 interface CheckinStatusResponse {
   checkedInToday: boolean;
+  canClaim: boolean;
+  nextClaimAt: string;
+  remainingSeconds: number;
   ethiopiaDate: string;
   rewardAmount: number;
   availableBalance: number;
@@ -19,12 +22,21 @@ interface CheckinStatusResponse {
   }>;
 }
 
+function formatCountdown(totalSeconds: number) {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+}
+
 export function CheckinPage() {
   const [data, setData] = useState<CheckinStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [clockMs, setClockMs] = useState(Date.now());
 
   // Read-only fetch on page open — NEVER auto-credits ETB
   const loadStatus = async () => {
@@ -43,8 +55,13 @@ export function CheckinPage() {
     void loadStatus();
   }, []);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => setClockMs(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const handleManualClaim = async () => {
-    if (claiming || data?.checkedInToday) return;
+    if (claiming || !canClaimNow) return;
     setClaiming(true);
     setStatusMsg('');
     setErrorMsg('');
@@ -67,7 +84,10 @@ export function CheckinPage() {
     }
   };
 
-  const claimedToday = Boolean(data?.checkedInToday);
+  const nextClaimAt = data?.nextClaimAt ? new Date(data.nextClaimAt).getTime() : 0;
+  const remainingSeconds = Math.max(0, Math.ceil((nextClaimAt - clockMs) / 1000));
+  const canClaimNow = Boolean(data?.canClaim) || (nextClaimAt > 0 && remainingSeconds === 0);
+  const claimedToday = !canClaimNow;
 
   return (
     <AppShell title="Daily Check-In">
@@ -81,7 +101,7 @@ export function CheckinPage() {
             <div>
               <h2 className="text-xl sm:text-2xl font-bold">Daily Check-In</h2>
               <p className="text-xs sm:text-sm text-white/85 mt-0.5">
-                Manual claim only · +{data?.rewardAmount ?? 2} ETB per Ethiopia calendar day
+                Manual claim only · +{data?.rewardAmount ?? 2} ETB every 24 hours
               </p>
             </div>
           </div>
@@ -119,15 +139,15 @@ export function CheckinPage() {
             </h3>
             <p className="text-xs text-slate-500">
               {claimedToday
-                ? 'Claimed Today — come back after midnight (Ethiopia time) for your next manual claim.'
-                : 'Ready to claim manually. Click CLAIM to credit your Wallet.'}
+                ? `Your next reward unlocks in ${formatCountdown(remainingSeconds)}.`
+                : 'Your 24-hour waiting period is complete. You can claim now.'}
             </p>
           </div>
 
           <button
             type="button"
             data-testid="daily-checkin-claim-btn"
-            disabled={loading || claiming || claimedToday}
+            disabled={loading || claiming || !canClaimNow}
             onClick={handleManualClaim}
             className={`min-w-[160px] min-h-[46px] px-6 py-2.5 rounded-full font-bold text-sm shadow-md transition-colors cursor-pointer shrink-0 ${
               claimedToday
@@ -139,8 +159,8 @@ export function CheckinPage() {
               ? 'Loading...'
               : claiming
               ? 'Claiming...'
-              : claimedToday
-              ? 'Claimed Today'
+              : !canClaimNow
+              ? `Available in ${formatCountdown(remainingSeconds)}`
               : 'CLAIM'}
           </button>
         </section>
@@ -154,7 +174,7 @@ export function CheckinPage() {
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
           ) : !(data?.history || []).length ? (
             <p className="p-8 text-center text-sm text-slate-500">
-              No daily check-ins claimed yet. Press CLAIM above to claim today&apos;s {data?.rewardAmount ?? 2} ETB.
+              No daily check-ins claimed yet. Your first claim unlocks 24 hours after registration.
             </p>
           ) : (
             <div className="divide-y divide-slate-100">

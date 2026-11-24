@@ -22,9 +22,11 @@ interface PurchasedPlanItem {
   remainingDays: number;
   isCompleted: boolean;
   canClaim: boolean;
-  statusLabel: 'Ready to Claim' | 'Claimed Today' | 'Plan Completed';
+  statusLabel: string;
   claimedToday: boolean;
   totalClaimed: number;
+  nextClaimAt: string;
+  remainingSeconds: number;
 }
 
 interface IncomeResponse {
@@ -40,6 +42,14 @@ interface IncomeResponse {
   transactions: LedgerTransaction[];
 }
 
+function formatCountdown(totalSeconds: number) {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+}
+
 export function IncomePage() {
   const { user } = useAuth();
   const displayName = getCustomerDisplayName(user);
@@ -49,6 +59,7 @@ export function IncomePage() {
   const [statusMsg, setStatusMsg] = useState('');
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'today' | 'month'>('all');
+  const [clockMs, setClockMs] = useState(Date.now());
 
   const loadIncome = async () => {
     setLoading(true);
@@ -65,6 +76,11 @@ export function IncomePage() {
 
   useEffect(() => {
     void loadIncome();
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setClockMs(Date.now()), 1000);
+    return () => window.clearInterval(interval);
   }, []);
 
   const handleManualClaimPlan = async (purchaseId: string) => {
@@ -141,7 +157,7 @@ export function IncomePage() {
           <div className="sm:col-span-7 p-5 flex flex-col justify-center">
             <h2 className="text-xl sm:text-2xl font-bold">{displayName}&apos;s Purchased Plans &amp; Income</h2>
             <p className="text-xs sm:text-sm text-white/85 mt-1">
-              Lists only plans purchased by your account. Daily mining ETB is never added automatically — press CLAIM manually each day.
+              Lists only plans purchased by your account. Daily mining ETB is never added automatically — the first claim unlocks 24 hours after purchase, then every 24 hours.
             </p>
           </div>
           <div className="sm:col-span-5 h-32 sm:h-auto overflow-hidden">
@@ -264,7 +280,10 @@ export function IncomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.purchases.map((p) => (
+              {data.purchases.map((p) => {
+                const remainingSeconds = Math.max(0, Math.ceil((new Date(p.nextClaimAt).getTime() - clockMs) / 1000));
+                const claimReady = !p.isCompleted && (p.canClaim || remainingSeconds === 0);
+                return (
                 <article
                   key={p.id}
                   data-testid={`purchased-plan-${p.planCode}`}
@@ -292,7 +311,7 @@ export function IncomePage() {
                           : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {p.statusLabel}
+                      {p.isCompleted ? 'Plan Completed' : claimReady ? 'Ready to Claim' : `Next claim in ${formatCountdown(remainingSeconds)}`}
                     </span>
                   </div>
 
@@ -337,7 +356,7 @@ export function IncomePage() {
                     <button
                       type="button"
                       data-testid={`claim-plan-btn-${p.id}`}
-                      disabled={!p.canClaim || claimingId === p.id}
+                      disabled={!claimReady || claimingId === p.id}
                       onClick={() => handleManualClaimPlan(p.id)}
                       className={`px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
                         p.isCompleted
@@ -351,13 +370,14 @@ export function IncomePage() {
                         ? 'Claiming...'
                         : p.isCompleted
                         ? 'Plan Completed'
-                        : p.claimedToday
-                        ? 'Claimed Today'
+                        : !claimReady
+                        ? `Claim in ${formatCountdown(remainingSeconds)}`
                         : 'CLAIM'}
                     </button>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

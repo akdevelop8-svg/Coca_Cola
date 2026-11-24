@@ -22,6 +22,9 @@ const json = (data: unknown, status = 200) =>
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
 const nowIso = () => new Date().toISOString();
+const ethiopiaDateOf = (date: Date) => new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Addis_Ababa", year: "numeric", month: "2-digit", day: "2-digit",
+}).format(date);
 const ethiopiaDate = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Addis_Ababa",
@@ -120,21 +123,6 @@ const normalizePhone = (value: string): string => {
   return s;
 };
 const isPhone = (value: string) => /^\+251[79]\d{8}$/.test(normalizePhone(value));
-const plans = [
-  { code: "A", name: "Plan A", investment: 600, dailyMining: 100, periodDays: 365 },
-  { code: "B", name: "Plan B", investment: 1500, dailyMining: 200, periodDays: 365 },
-  { code: "C", name: "Plan C", investment: 3000, dailyMining: 500, periodDays: 365 },
-  { code: "D", name: "Plan D", investment: 5000, dailyMining: 750, periodDays: 365 },
-  { code: "E", name: "Plan E", investment: 8000, dailyMining: 1200, periodDays: 365 },
-  { code: "F", name: "Plan F", investment: 12000, dailyMining: 2000, periodDays: 365 },
-  { code: "G", name: "Plan G", investment: 25000, dailyMining: 5000, periodDays: 365 },
-  { code: "H", name: "Plan H", investment: 50000, dailyMining: 12000, periodDays: 365 },
-  { code: "I", name: "Plan I", investment: 75000, dailyMining: 20000, periodDays: 365 },
-  { code: "J", name: "Plan J", investment: 100000, dailyMining: 30000, periodDays: 365 },
-  { code: "K", name: "Plan K", investment: 150000, dailyMining: 35000, periodDays: 365 },
-  { code: "L", name: "Plan L", investment: 500000, dailyMining: 50000, periodDays: 365 },
-  { code: "M", name: "Plan M", investment: 1000000, dailyMining: 100000, periodDays: 365 },
-];
 const defaultSettings = {
   termsVersion: "v1.1",
   registrationBonus: 150,
@@ -164,12 +152,19 @@ const companyInfo = {
   authorizationDisclosure: "Any brand, sponsorship, or authorization statement must be supported by current written permission before publication.",
 };
 
+const ethiopiaDateOf = (date: Date) => new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Addis_Ababa", year: "numeric", month: "2-digit", day: "2-digit",
+}).format(date);
 async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status = 400): Promise<T> {
   const result = await promise;
   if (result.error) {
     const message = String(result.error.message || "Database operation failed.");
     if (message.includes("FINANCIAL_OPERATIONS_DISABLED")) throw new ApiError("Financial operations are temporarily disabled.", 503);
     if (message.includes("PROMOTIONAL_REWARDS_DISABLED")) throw new ApiError("Promotional rewards are temporarily disabled.", 503);
+    if (message.includes("CLAIM_COOLDOWN_ACTIVE")) throw new ApiError("The 24-hour waiting period has not finished yet. Please wait for the countdown to reach zero.", 409);
+    if (message.includes("CHECKIN_COOLDOWN_ACTIVE")) throw new ApiError("Daily Check-In unlocks 24 hours after your registration or last check-in.", 409);
+    if (message.includes("WITHDRAWAL_ALREADY_REQUESTED_TODAY")) throw new ApiError("Only one withdrawal request is allowed per Ethiopia calendar day.", 409);
+    if (message.includes("PLAN_PURCHASE_REQUIRED_FOR_WITHDRAWAL")) throw new ApiError("Purchase at least one plan before requesting a withdrawal.", 403);
     if (message.includes("ALREADY_CLAIMED_TODAY") || message.includes("ALREADY_CHECKED_IN_TODAY")) throw new ApiError("You have already claimed this reward today.", 409);
     if (message.includes("MAKER_CHECKER_REQUIRED")) throw new ApiError("Withdrawal completion is not available under the current administrator policy.", 403);
     if (message.includes("WITHDRAWAL_REVIEWER_REQUIRED")) throw new ApiError("This withdrawal must be approved before completion.", 409);
@@ -189,6 +184,7 @@ async function checked<T>(promise: PromiseLike<{ data: T; error: any }>, status 
     if (message.includes("ACTIVE_PLAN_LIMIT_REACHED")) throw new ApiError("You already have the maximum number of active plans.", 400);
     if (message.includes("PLAN_NOT_CLAIMABLE")) throw new ApiError("This plan is not available for a daily claim.", 400);
     if (message.includes("TASK_TARGET_NOT_REACHED")) throw new ApiError("The team deposit target for this task has not been reached yet.", 400);
+    if (message.includes("TASK_DISABLED")) throw new ApiError("This task has been disabled by the administrator.", 403);
     if (message.includes("ALREADY_CLAIMED")) throw new ApiError("This task reward has already been claimed.", 409);
     if (message.includes("UNKNOWN_TASK_ID")) throw new ApiError("Unknown task level ID.", 400);
     throw new ApiError(message, status);
@@ -221,27 +217,44 @@ async function profileFor(user: any) {
   const [termsResult, inviterResult] = await Promise.all([
     db.from("terms_acceptances").select("terms_version,accepted_at").eq("user_id", user.id).order("accepted_at", { ascending: false }).limit(1).maybeSingle(),
     user.invited_by_user_id
-      ? db.from("users").select("referral_code").eq("id", user.invited_by_user_id).maybeSingle()
+      ? db.from("users").select("id,full_name,phone,referral_code").eq("id", user.invited_by_user_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
   const terms = termsResult.data;
+  const inviter = inviterResult.data;
   return {
     id: user.id,
     fullName: user.full_name,
-    nickname: user.nickname ?? null,
-    displayName: user.nickname || user.full_name || "User",
+    nickname: null,
+    displayName: user.full_name || "User",
     phone: user.phone,
     username: user.username ?? null,
     email: user.email ?? null,
     role: user.role,
     status: user.status,
     referralCode: user.referral_code,
-    invitedByCode: inviterResult.data?.referral_code ?? null,
+    invitedByCode: inviter?.referral_code ?? null,
+    invitedBy: inviter ? { id: inviter.id, fullName: inviter.full_name, phone: inviter.phone, referralCode: inviter.referral_code } : null,
     avatarUrl: user.avatar_url ?? null,
     termsAcceptedVersion: terms?.terms_version ?? null,
     termsAcceptedAt: terms?.accepted_at ?? null,
     createdAt: user.created_at,
+    lastActiveAt: user.last_active_at ?? null,
   };
+}
+async function getInvestmentPlans(includeInactive = false) {
+  const rows = await checked<any[]>(db.from("investment_plans").select("*").order("sort_order", { ascending: true }));
+  return rows
+    .filter((row: any) => includeInactive || row.is_active === true)
+    .map((row: any) => ({
+      code: String(row.code),
+      name: String(row.name),
+      investment: Number(row.investment),
+      dailyMining: Number(row.daily_mining),
+      periodDays: Number(row.period_days),
+      isActive: row.is_active === true,
+      sortOrder: Number(row.sort_order || 0),
+    }));
 }
 async function unreadCount(userId: string) {
   const r = await db.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", 0);
@@ -352,9 +365,9 @@ async function getBalances(userId: string) {
 }
 async function teamFor(userId: string) {
   const owner = await checked<any>(db.from("users").select("referral_code").eq("id", userId).maybeSingle());
-  const l1 = await checked<any[]>(db.from("users").select("id,full_name,nickname,phone,created_at,referral_code").eq("invited_by_user_id", userId));
+  const l1 = await checked<any[]>(db.from("users").select("id,full_name,phone,created_at,referral_code").eq("invited_by_user_id", userId));
   const ids1 = (l1 || []).map((u: any) => u.id);
-  const l2 = ids1.length ? await checked<any[]>(db.from("users").select("id,full_name,nickname,phone,created_at,referral_code,invited_by_user_id").in("invited_by_user_id", ids1)) : [];
+  const l2 = ids1.length ? await checked<any[]>(db.from("users").select("id,full_name,phone,created_at,referral_code,invited_by_user_id").in("invited_by_user_id", ids1)) : [];
   const ids2 = (l2 || []).map((u: any) => u.id);
   const l3 = ids2.length ? await checked<any[]>(db.from("users").select("id,full_name,nickname,phone,created_at,referral_code,invited_by_user_id").in("invited_by_user_id", ids2)) : [];
   const all = [
@@ -373,7 +386,7 @@ async function teamFor(userId: string) {
     return {
       id: u.id,
       level: u.level,
-      displayName: u.nickname || u.full_name || "User",
+      displayName: u.full_name || "User",
       maskedPhone: maskAccount(u.phone),
       referralCode: u.referral_code,
       registeredAt: u.created_at,
@@ -420,43 +433,45 @@ async function teamTaskSummary(userId: string) {
   const total = round2((deposits || []).reduce((sum: number, x: any) => sum + Number(x.amount || 0), 0));
   const claimedRows = await checked<any[]>(db.from("task_claims").select("task_id").eq("user_id", userId));
   const claimed = new Set((claimedRows || []).map((x: any) => x.task_id));
-  const definitions = [
-    { id: "val_1", level: 1, targetAmount: 25000, rewardAmount: 1500 },
-    { id: "val_2", level: 2, targetAmount: 50000, rewardAmount: 3000 },
-    { id: "val_3", level: 3, targetAmount: 100000, rewardAmount: 6000 },
-    { id: "val_4", level: 4, targetAmount: 150000, rewardAmount: 10000 },
-    { id: "val_5", level: 5, targetAmount: 300000, rewardAmount: 20000 },
-  ];
-  const valueTasks = definitions.map((task) => ({
-    ...task,
-    progress: Math.min(total, task.targetAmount),
-    remaining: Math.max(0, round2(task.targetAmount - total)),
-    percent: Math.min(100, Math.round((total / task.targetAmount) * 100)),
-    eligible: total >= task.targetAmount,
+  const definitions = await checked<any[]>(db.from("team_tasks").select("*").order("level", { ascending: true }));
+  const valueTasks = definitions.map((task: any) => ({
+    id: task.id,
+    level: Number(task.level),
+    targetAmount: Number(task.target_amount),
+    rewardAmount: Number(task.reward_amount),
+    enabled: task.is_enabled === true,
+    progress: Math.min(total, Number(task.target_amount)),
+    remaining: Math.max(0, round2(Number(task.target_amount) - total)),
+    percent: Math.min(100, Math.round((total / Number(task.target_amount)) * 100)),
+    eligible: task.is_enabled === true && total >= Number(task.target_amount),
     claimed: claimed.has(task.id),
   }));
   return {
     verifiedDepositsTotal: total,
     qualifyingPurchasesVolume: total,
-    maxTarget: 300000,
-    overallPercent: Math.min(100, Math.round((total / 300000) * 100)),
+    maxTarget: Math.max(0, ...valueTasks.map((task: any) => task.targetAmount)),
+    overallPercent: Math.min(100, Math.round((total / Math.max(1, ...valueTasks.map((task: any) => task.targetAmount))) * 100)),
     valueTasks,
   };
 }
 async function walletSummary(userId: string) {
-  const [balances, purchases, team, checkin] = await Promise.all([
+  const [balances, purchases, team, account, latestCheckin] = await Promise.all([
     getBalances(userId),
     checked<any[]>(db.from("plan_purchases").select("id").eq("user_id", userId).eq("status", "active").gt("end_date", nowIso())),
     teamFor(userId),
-    db.from("daily_checkins").select("id").eq("user_id", userId).eq("ethiopia_date", ethiopiaDate()).maybeSingle(),
+    checked<any>(db.from("users").select("created_at").eq("id", userId).single()),
+    checked<any>(db.from("daily_checkins").select("created_at").eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle()),
   ]);
+  const cooldownBase = latestCheckin?.created_at || account.created_at;
+  const checkinNextAt = new Date(new Date(cooldownBase).getTime() + 24 * 60 * 60 * 1000);
   return {
     ...balances,
     activePlansCount: (purchases || []).length,
     maxActivePlans: 2,
     teamMembersCount: team.summary.totalRegisteredMembers,
     qualifyingTeamMembersCount: team.summary.qualifyingMembersCount,
-    checkedInToday: !!checkin.data,
+    checkedInToday: Date.now() < checkinNextAt.getTime(),
     todayEthiopiaDate: ethiopiaDate(),
   };
 }
@@ -517,13 +532,14 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "config" && method === "GET") {
-    const [app, admins, gift, methods, channels, assets] = await Promise.all([
+    const [app, admins, gift, methods, channels, assets, investmentPlans] = await Promise.all([
       getAppSettings(),
       db.from("users").select("id", { count: "exact", head: true }).in("role", ["owner_admin", "finance_admin", "support_admin", "content_admin", "admin", "super_admin"]),
       db.from("gift_code_settings").select("is_enabled").eq("id", "default").maybeSingle(),
       db.from("payment_methods").select("*").eq("is_active", 1).order("sort_order"),
       db.from("support_channels").select("*").eq("is_active", 1).order("sort_order"),
       db.from("carousel_assets").select("*").eq("is_active", 1).order("sort_order"),
+      getInvestmentPlans(),
     ]);
     if (admins.error || methods.error || channels.error || assets.error) throw new ApiError("Unable to load platform configuration.", 503);
     const publicSettings = app.financialOperationsEnabled ? app.settings : {
@@ -552,6 +568,7 @@ async function route(request: Request): Promise<Response> {
         id: a.id, title: a.title, subtitle: a.subtitle, imageUrl: a.image_url,
         isActive: a.is_active === 1, sortOrder: a.sort_order,
       })),
+      investmentPlans,
       companyInfo,
     });
   }
@@ -774,27 +791,27 @@ async function route(request: Request): Promise<Response> {
     });
   }
 
-  if (p === "profile/nickname" && method === "PUT") {
-    const nickname = String(body.nickname || "").trim();
-    if (nickname.length < 2 || nickname.length > 24 || !/^[\p{L}\p{N} _.-]+$/u.test(nickname)) {
-      throw new ApiError("Nickname must be 2–24 characters and use letters or numbers.", 400);
-    }
-    const updated = await checked<any>(db.from("users").update({ nickname }).eq("id", user.id).select("*").single());
-    return json({ user: await profileFor(updated) });
-  }
-
   if (p === "dashboard/summary" && method === "GET") return json(await walletSummary(user.id));
 
   if (p === "checkin" && method === "GET") {
-    const [app, wallet, history] = await Promise.all([
+    const [app, wallet, history, account, latestCheckin] = await Promise.all([
       getAppSettings(),
       walletSummary(user.id),
       checked<any[]>(db.from("daily_checkins").select("id,ethiopia_date,amount,status,created_at")
         .eq("user_id", user.id).order("ethiopia_date", { ascending: false }).limit(30)),
+      checked<any>(db.from("users").select("created_at").eq("id", user.id).single()),
+      checked<any>(db.from("daily_checkins").select("created_at").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle()),
     ]);
     const rewardAmount = Number(app.settings.dailyCheckinAmount);
+    const cooldownBase = latestCheckin?.created_at || account.created_at;
+    const nextClaimAt = new Date(new Date(cooldownBase).getTime() + 24 * 60 * 60 * 1000);
+    const remainingSeconds = Math.max(0, Math.ceil((nextClaimAt.getTime() - Date.now()) / 1000));
     return json({
-      checkedInToday: wallet.checkedInToday,
+      checkedInToday: remainingSeconds > 0,
+      canClaim: remainingSeconds === 0,
+      nextClaimAt: nextClaimAt.toISOString(),
+      remainingSeconds,
       ethiopiaDate: wallet.todayEthiopiaDate,
       todayEthiopiaDate: wallet.todayEthiopiaDate,
       rewardAmount,
@@ -818,7 +835,8 @@ async function route(request: Request): Promise<Response> {
 
   if (p === "plans/purchase" && method === "POST") {
     const code = String(body.planCode || body.code || "").toUpperCase();
-    const plan = plans.find((x) => x.code === code);
+    const availablePlans = await getInvestmentPlans();
+    const plan = availablePlans.find((x: any) => x.code === code);
     if (!plan) throw new ApiError("Selected plan is not available.", 400);
     const idempotencyKey = String(body.idempotencyKey || crypto.randomUUID());
     const result = await checked<any>(db.rpc("purchase_plan_atomic", {
@@ -839,27 +857,29 @@ async function route(request: Request): Promise<Response> {
       ? await checked<any[]>(db.from("daily_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1000))
       : [];
     const today = ethiopiaDate();
-    const dayMs = (value: string) => Date.parse(value + "T00:00:00.000Z");
-    const purchaseItems = purchases.map((x: any) => {
+      const purchaseItems = purchases.map((x: any) => {
       const purchaseEthDate = new Intl.DateTimeFormat("en-CA", {
         timeZone: "Africa/Addis_Ababa", year: "numeric", month: "2-digit", day: "2-digit",
       }).format(new Date(x.start_date));
       const periodDays = Number(x.period_days) || 365;
-      const rawElapsed = Math.max(0, Math.floor((dayMs(today) - dayMs(purchaseEthDate)) / 86400000));
-      const daysElapsed = Math.max(0, Math.min(periodDays, rawElapsed));
-      const remainingDays = Math.max(0, periodDays - daysElapsed);
-      const isCompleted = rawElapsed >= periodDays || x.status === "completed";
-      const claimedToday = claims.some((c: any) => c.purchase_id === x.id && c.ethiopia_date === today);
+      const latestClaim = claims.find((c: any) => c.purchase_id === x.id);
+      const nextClaimAtMs = new Date(latestClaim?.created_at || x.start_date).getTime() + 24 * 60 * 60 * 1000;
+      const remainingSeconds = Math.max(0, Math.ceil((nextClaimAtMs - Date.now()) / 1000));
+      const daysElapsed = Math.max(0, Math.min(periodDays, Math.floor((Date.now() - new Date(x.start_date).getTime()) / 86400000)));
+      const remainingDays = Math.max(0, Math.ceil((new Date(x.end_date).getTime() - Date.now()) / 86400000));
+      const isCompleted = Date.now() >= new Date(x.end_date).getTime() || x.status === "completed";
+      const claimedToday = Boolean(latestClaim && latestClaim.ethiopia_date === today);
       const totalClaimed = round2(claims.filter((c: any) => c.purchase_id === x.id)
         .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0));
-      const canClaim = !isCompleted && x.status === "active" && !claimedToday;
+      const canClaim = !isCompleted && x.status === "active" && remainingSeconds === 0;
       return {
         id: x.id, planCode: x.plan_code, amount: Number(x.amount),
         dailyMiningRate: Number(x.daily_mining_rate), periodDays,
         status: isCompleted ? "completed" : x.status,
         startDate: x.start_date, endDate: x.end_date, purchaseEthDate,
         daysElapsed, remainingDays, isCompleted, canClaim,
-        statusLabel: isCompleted ? "Plan Completed" : claimedToday ? "Claimed Today" : "Ready to Claim",
+        nextClaimAt: new Date(nextClaimAtMs).toISOString(), remainingSeconds,
+        statusLabel: isCompleted ? "Plan Completed" : canClaim ? "Ready to Claim" : "Available in 24 hours",
         claimedToday, totalClaimed, createdAt: x.created_at,
       };
     });
@@ -1031,8 +1051,18 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "withdrawals" && method === "GET") {
-    const rows = await checked<any[]>(db.from("withdrawals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }));
-    return json({ withdrawals: rows.map(withdrawalDto) });
+    const [rows, firstPlan, recentRows] = await Promise.all([
+      checked<any[]>(db.from("withdrawals").select("*").eq("user_id", user.id).order("created_at", { ascending: false })),
+      checked<any>(db.from("plan_purchases").select("id").eq("user_id", user.id).limit(1).maybeSingle()),
+      checked<any[]>(db.from("withdrawals").select("created_at").eq("user_id", user.id).gte("created_at", new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString()).order("created_at", { ascending: false })),
+    ]);
+    const withdrawalUsedToday = recentRows.some((row: any) => ethiopiaDateOf(new Date(row.created_at)) === ethiopiaDate());
+    return json({
+      withdrawals: rows.map(withdrawalDto),
+      hasPurchasedPlan: Boolean(firstPlan),
+      withdrawalUsedToday,
+      canWithdrawToday: Boolean(firstPlan) && !withdrawalUsedToday,
+    });
   }
   if (p === "withdrawals" && method === "POST") {
     const withdrawalSettings = await getAppSettings();
@@ -1190,12 +1220,68 @@ async function route(request: Request): Promise<Response> {
     let allowed = ["owner_admin", "super_admin"];
     if (/^admin\/(overview|deposits|withdrawals|payment-methods|gift-codes)/.test(p)) {
       allowed = ["owner_admin", "finance_admin", "admin", "super_admin"];
+    } else if (/^admin\/(plans|tasks|customers|users)/.test(p)) {
+      allowed = ["owner_admin", "admin", "super_admin"];
     } else if (p.startsWith("admin/tickets")) {
       allowed = ["owner_admin", "support_admin", "admin", "super_admin"];
     } else if (/^admin\/(broadcasts|channels|content)/.test(p)) {
       allowed = ["owner_admin", "content_admin", "support_admin", "admin", "super_admin"];
     }
     await requireAdmin(user, allowed);
+  }
+
+  if (p === "admin/plans" && method === "GET") {
+    return json({ plans: await getInvestmentPlans(true) });
+  }
+  if (p === "admin/plans" && method === "PUT") {
+    const submitted = Array.isArray(body.plans) ? body.plans : [];
+    if (submitted.length === 0) throw new ApiError("At least one plan must be supplied.", 400);
+    const rows = submitted.map((plan: any) => {
+      const code = String(plan.code || "").toUpperCase();
+      const investment = Number(plan.investment);
+      const dailyMining = Number(plan.dailyMining);
+      const periodDays = Number(plan.periodDays);
+      if (!/^[A-M]$/.test(code) || !Number.isFinite(investment) || investment <= 0 ||
+          !Number.isFinite(dailyMining) || dailyMining <= 0 || !Number.isInteger(periodDays) || periodDays < 1 || periodDays > 3650) {
+        throw new ApiError("Plan values must be valid positive amounts and a period from 1 to 3650 days.", 400);
+      }
+      return { code, investment, daily_mining: dailyMining, period_days: periodDays, is_active: plan.isActive !== false, updated_at: nowIso() };
+    });
+    if (new Set(rows.map((row: any) => row.code)).size !== rows.length) throw new ApiError("Each plan code must appear only once.", 400);
+    await checked(db.from("investment_plans").upsert(rows, { onConflict: "code" }));
+    await checked(db.from("admin_audit_logs").insert({
+      id: uuid("aud_"), actor_user_id: user.id, actor_role: user.role, action: "investment_plans_updated",
+      target_type: "platform", target_id: "investment_plans", details_json: { updatedCodes: rows.map((row: any) => row.code) }, created_at: nowIso(),
+    }));
+    return json({ success: true, plans: await getInvestmentPlans(true) });
+  }
+  if (p === "admin/tasks" && method === "GET") {
+    const rows = await checked<any[]>(db.from("team_tasks").select("*").order("level", { ascending: true }));
+    return json({ tasks: rows.map((row: any) => ({ id: row.id, level: Number(row.level), targetAmount: Number(row.target_amount), rewardAmount: Number(row.reward_amount), isEnabled: row.is_enabled === true })) });
+  }
+  if (p === "admin/tasks" && method === "PUT") {
+    const submitted = Array.isArray(body.tasks) ? body.tasks : [];
+    if (submitted.length === 0) throw new ApiError("At least one task must be supplied.", 400);
+    const rows = submitted.map((task: any) => {
+      const id = String(task.id || "");
+      const level = Number(task.level);
+      const targetAmount = Number(task.targetAmount);
+      const rewardAmount = Number(task.rewardAmount);
+      if (!/^val_[1-5]$/.test(id) || !Number.isInteger(level) || level < 1 || level > 5 ||
+          !Number.isFinite(targetAmount) || targetAmount <= 0 || !Number.isFinite(rewardAmount) || rewardAmount <= 0) {
+        throw new ApiError("Task target and reward must be positive numbers.", 400);
+      }
+      return { id, level, target_amount: targetAmount, reward_amount: rewardAmount, is_enabled: task.isEnabled !== false, updated_at: nowIso() };
+    });
+    if (new Set(rows.map((row: any) => row.id)).size !== rows.length || new Set(rows.map((row: any) => row.level)).size !== rows.length) {
+      throw new ApiError("Task IDs and levels must be unique.", 400);
+    }
+    await checked(db.from("team_tasks").upsert(rows, { onConflict: "id" }));
+    await checked(db.from("admin_audit_logs").insert({
+      id: uuid("aud_"), actor_user_id: user.id, actor_role: user.role, action: "team_tasks_updated",
+      target_type: "platform", target_id: "team_tasks", details_json: { updatedTaskIds: rows.map((row: any) => row.id) }, created_at: nowIso(),
+    }));
+    return json({ success: true });
   }
 
   if (p === "admin/overview" && method === "GET") {
@@ -1234,29 +1320,103 @@ async function route(request: Request): Promise<Response> {
   }
 
   if (p === "admin/users" && method === "GET") {
-    let q = db.from("users").select("id,full_name,nickname,phone,email,role,status,referral_code,created_at,last_active_at").eq("role", "customer").order("created_at", { ascending: false }).limit(200);
+    let q = db.from("users").select("id,full_name,phone,email,username,role,status,referral_code,created_at,last_active_at").eq("role", "customer").order("created_at", { ascending: false }).limit(200);
     const term = String(query.get("q") || "").trim();
-    if (term) q = q.or("phone.ilike.%" + term + "%,full_name.ilike.%" + term + "%,nickname.ilike.%" + term + "%");
+    if (term) q = q.or("phone.ilike.%" + term + "%,full_name.ilike.%" + term + "%,email.ilike.%" + term + "%,username.ilike.%" + term + "%");
     const rows = await checked<any[]>(q);
     return json({ users: rows.map((u: any) => ({
-      id:u.id, fullName:u.nickname || u.full_name, phone:u.phone, email:u.email, role:u.role,
+      id:u.id, fullName:u.full_name, phone:u.phone, email:u.email, username:u.username, role:u.role,
       status:u.status, referralCode:u.referral_code, createdAt:u.created_at, lastActiveAt:u.last_active_at,
     })) });
   }
   const adminCustomer = p.match(/^admin\/customers\/([^/]+)$/);
-  if(adminCustomer && method==="GET"){
-    const targetId=decodeURIComponent(adminCustomer[1]);
-    const customer=await checked<any>(db.from("users").select("*").eq("id",targetId).maybeSingle());
-    if(!customer) throw new ApiError("Customer not found.",404);
-    const [wallet,purchases,ledger]=await Promise.all([
+  if (adminCustomer && method === "GET") {
+    const targetId = decodeURIComponent(adminCustomer[1]);
+    const customer = await checked<any>(db.from("users").select("*").eq("id", targetId).maybeSingle());
+    if (!customer || customer.role !== "customer") throw new ApiError("Customer not found.", 404);
+
+    const [wallet, purchases, ledger, deposits, withdrawals, dailyCheckins, dailyClaims, tickets, l1] = await Promise.all([
       getBalances(targetId),
-      checked<any[]>(db.from("plan_purchases").select("*").eq("user_id",targetId).order("created_at",{ascending:false})),
-      checked<any[]>(db.from("ledger_entries").select("*").eq("user_id",targetId).order("created_at",{ascending:false}).limit(100)),
+      checked<any[]>(db.from("plan_purchases").select("*").eq("user_id", targetId).order("created_at", { ascending: false })),
+      checked<any[]>(db.from("ledger_entries").select("*").eq("user_id", targetId).order("created_at", { ascending: false }).limit(200)),
+      checked<any[]>(db.from("deposits").select("*").eq("user_id", targetId).order("created_at", { ascending: false }).limit(100)),
+      checked<any[]>(db.from("withdrawals").select("*").eq("user_id", targetId).order("created_at", { ascending: false }).limit(100)),
+      checked<any[]>(db.from("daily_checkins").select("*").eq("user_id", targetId).order("created_at", { ascending: false }).limit(200)),
+      checked<any[]>(db.from("daily_claims").select("*").eq("user_id", targetId).order("created_at", { ascending: false }).limit(500)),
+      checked<any[]>(db.from("support_tickets").select("id,category,subject,status,is_read_by_admin,created_at,updated_at").eq("user_id", targetId).order("updated_at", { ascending: false }).limit(100)),
+      checked<any[]>(db.from("users").select("id,full_name,phone,referral_code,status,created_at").eq("invited_by_user_id", targetId)),
     ]);
+
+    const l1Ids = l1.map((row: any) => row.id);
+    const l2 = l1Ids.length
+      ? await checked<any[]>(db.from("users").select("id,full_name,phone,referral_code,status,created_at").in("invited_by_user_id", l1Ids))
+      : [];
+    const l2UserIds = l2.map((row: any) => row.id);
+    const l3 = l2UserIds.length
+      ? await checked<any[]>(db.from("users").select("id,full_name,phone,referral_code,status,created_at").in("invited_by_user_id", l2UserIds))
+      : [];
+    const allTeam = [
+      ...l1.map((row: any) => ({ ...row, level: 1 })),
+      ...l2.map((row: any) => ({ ...row, level: 2 })),
+      ...l3.map((row: any) => ({ ...row, level: 3 })),
+    ];
+    const allTeamIds = allTeam.map((row: any) => row.id);
+    const qualifiedPurchases = allTeamIds.length
+      ? await checked<any[]>(db.from("plan_purchases").select("user_id").in("user_id", allTeamIds))
+      : [];
+    const qualifiedIds = new Set(qualifiedPurchases.map((row: any) => row.user_id));
+    const planCodeById = new Map(purchases.map((row: any) => [row.id, row.plan_code]));
+    const transactionDtos = ledger.map((row: any) => ({
+      id: row.id, userId: row.user_id, type: row.type, amountSigned: Number(row.amount_signed),
+      balanceAfter: Number(row.balance_after), referenceId: row.reference_id, note: row.note, createdAt: row.created_at,
+    }));
+    const activities = transactionDtos.map((row: any) => ({
+      id: row.id, type: row.type, description: row.note || row.type.replaceAll("_", " "), timestamp: row.createdAt,
+    })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 60);
+
     return json({
-      customer:await profileFor(customer),wallet,
-      plans:purchases.map((p:any)=>({id:p.id,planCode:p.plan_code,amount:Number(p.amount),dailyMiningRate:Number(p.daily_mining_rate),periodDays:p.period_days,status:p.status,startDate:p.start_date,endDate:p.end_date,createdAt:p.created_at})),
-      transactions:ledger.map((x:any)=>({id:x.id,userId:x.user_id,type:x.type,amountSigned:Number(x.amount_signed),balanceAfter:Number(x.balance_after),referenceId:x.reference_id,note:x.note,createdAt:x.created_at})),
+      customer: await profileFor(customer),
+      wallet,
+      team: {
+        level1Count: l1.length,
+        level2Count: l2.length,
+        level3Count: l3.length,
+        members: allTeam.map((row: any) => ({
+          id: row.id, level: row.level, phone: row.phone, referralCode: row.referral_code,
+          status: row.status, qualified: qualifiedIds.has(row.id), registeredAt: row.created_at,
+        })),
+      },
+      deposits: deposits.map((row: any) => ({
+        id: row.id, methodName: row.method_name, accountNumberSnapshot: row.account_number_snapshot,
+        amount: Number(row.amount), txReference: row.tx_reference, status: row.status,
+        rejectionReason: row.rejection_reason, reviewedAt: row.reviewed_at, createdAt: row.created_at,
+      })),
+      withdrawals: withdrawals.map((row: any) => ({
+        id: row.id, methodName: row.method_name, accountNumberSnapshot: row.account_number_snapshot,
+        accountOwnerSnapshot: row.account_owner_snapshot, grossAmount: Number(row.gross_amount),
+        feeAmount: Number(row.fee_amount), netAmount: Number(row.net_amount), status: row.status,
+        providerReference: row.provider_reference, rejectionReason: row.rejection_reason,
+        reviewedAt: row.reviewed_at, processedAt: row.processed_at, completedAt: row.completed_at,
+        createdAt: row.created_at,
+      })),
+      planPurchases: purchases.map((row: any) => ({
+        id: row.id, planCode: row.plan_code, amount: Number(row.amount), dailyMiningRate: Number(row.daily_mining_rate),
+        periodDays: row.period_days, status: row.status, startDate: row.start_date, endDate: row.end_date,
+        createdAt: row.created_at,
+      })),
+      dailyCheckins: dailyCheckins.map((row: any) => ({
+        id: row.id, ethiopiaDate: row.ethiopia_date, status: row.status, createdAt: row.created_at,
+      })),
+      dailyClaims: dailyClaims.map((row: any) => ({
+        id: row.id, ethiopiaDate: row.ethiopia_date, amount: Number(row.amount),
+        planCode: planCodeById.get(row.purchase_id) || "Unknown", createdAt: row.created_at,
+      })),
+      tickets: tickets.map((row: any) => ({
+        id: row.id, category: row.category, subject: row.subject, status: row.status,
+        isReadByAdmin: row.is_read_by_admin === 1, createdAt: row.created_at, updatedAt: row.updated_at,
+      })),
+      activities,
+      transactions: transactionDtos,
     });
   }
 
@@ -1293,11 +1453,11 @@ async function route(request: Request): Promise<Response> {
   if (p === "admin/deposits" && method === "GET") {
     const rows = await checked<any[]>(db.from("deposits").select("*").order("created_at", { ascending: false }).limit(300));
     const ids = [...new Set(rows.map((x: any) => x.user_id))];
-    const users = ids.length ? await checked<any[]>(db.from("users").select("id,full_name,nickname,phone").in("id", ids)) : [];
+    const users = ids.length ? await checked<any[]>(db.from("users").select("id,full_name,phone").in("id", ids)) : [];
     const byId = new Map(users.map((u: any) => [u.id, u]));
     return json({ deposits: rows.map((d: any) => ({
       ...depositDto(d),
-      customerName: byId.get(d.user_id)?.nickname || byId.get(d.user_id)?.full_name || "Customer",
+      customerName: byId.get(d.user_id)?.full_name || "Customer",
       customerPhone: byId.get(d.user_id)?.phone || "",
     })) });
   }
@@ -1427,7 +1587,7 @@ async function route(request: Request): Promise<Response> {
     ]);
     const byUser = new Map(users.map((u: any) => [u.id, u]));
     return json({ tickets: tickets.map((t: any) => ({
-      id:t.id,userId:t.user_id,customerName:byUser.get(t.user_id)?.nickname || byUser.get(t.user_id)?.full_name || "Customer",
+      id:t.id,userId:t.user_id,customerName:byUser.get(t.user_id)?.full_name || "Customer",
       customerPhone:byUser.get(t.user_id)?.phone || "",category:t.category,subject:t.subject,message:t.message,
       status:t.status,attachmentPath:t.attachment_path,isReadByAdmin:t.is_read_by_admin===1,
       createdAt:t.created_at,updatedAt:t.updated_at,
@@ -1477,7 +1637,7 @@ async function route(request: Request): Promise<Response> {
     const ids=rows.map((x:any)=>x.id);
     const redemptions=ids.length ? await checked<any[]>(db.from("gift_code_redemptions").select("*").in("gift_code_id",ids).order("redeemed_at",{ascending:false})) : [];
     const userIds=[...new Set(redemptions.map((x:any)=>x.user_id))];
-    const users=userIds.length ? await checked<any[]>(db.from("users").select("id,phone,full_name,nickname").in("id",userIds)) : [];
+    const users=userIds.length ? await checked<any[]>(db.from("users").select("id,phone,full_name").in("id",userIds)) : [];
     const byId=new Map(users.map((u:any)=>[u.id,u]));
     const counts=new Map<string,number>();
     for(const x of redemptions) counts.set(x.gift_code_id,(counts.get(x.gift_code_id)||0)+1);
@@ -1492,7 +1652,7 @@ async function route(request: Request): Promise<Response> {
       giftCodes:codes,
       redemptions:redemptions.map((x:any)=>({
         id:x.id,giftCodeId:x.gift_code_id,code:x.code_snapshot,rewardAmount:Number(x.reward_amount),
-        customerPhone:byId.get(x.user_id)?.phone || "",customerName:byId.get(x.user_id)?.nickname || byId.get(x.user_id)?.full_name || "Customer",
+        customerPhone:byId.get(x.user_id)?.phone || "",customerName:byId.get(x.user_id)?.full_name || "Customer",
         redeemedAt:x.redeemed_at,
       })),
     });
