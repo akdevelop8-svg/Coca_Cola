@@ -751,8 +751,8 @@ export function AdminDashboardPage() {
         </div>
 
         {/* Admin sections: vertical controls on the left, workspace on the right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <nav aria-label="Admin Dashboard Sections" className="lg:col-span-3 flex flex-row flex-wrap lg:flex-col lg:items-stretch gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 lg:sticky lg:top-20">
+        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] sm:grid-cols-[minmax(11rem,1fr)_minmax(0,3fr)] lg:grid-cols-12 gap-3 sm:gap-5 items-start">
+        <nav aria-label="Admin Dashboard Sections" className="min-w-0 lg:col-span-3 flex flex-col items-stretch gap-1.5 bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
           {tabs.map((t) => {
             const Icon = t.icon;
             const count = t.id === 'deposits'
@@ -772,14 +772,14 @@ export function AdminDashboardPage() {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                className={`w-full min-w-0 px-1.5 sm:px-3.5 py-2 rounded-xl text-[9px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center gap-1 sm:gap-1.5 text-center sm:text-left leading-tight whitespace-normal break-words cursor-pointer transition-colors ${
                   tab === t.id
                     ? 'bg-[#D71920] text-white shadow-xs'
                     : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span>{t.label}</span>
+                <span className="w-full min-w-0 break-words leading-tight">{t.label}</span>
                 {count > 0 && (
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums whitespace-nowrap ${
                     tab === t.id ? 'bg-white text-[#B80D13]' :
