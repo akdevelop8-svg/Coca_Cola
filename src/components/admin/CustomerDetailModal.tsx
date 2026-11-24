@@ -144,11 +144,11 @@ export function CustomerDetailModal({
               {/* Account Metadata Grid (Zero wallet balance exposed) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5">
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase">Phone &amp; Nickname</p>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase">Customer Account</p>
                   <p className="text-sm font-bold font-mono text-slate-900 mt-1">{profile.customer.phone}</p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Display Name: <strong>{profile.customer.nickname || profile.customer.fullName || 'User'}</strong>
-                  </p>
+                  <p className="text-xs text-slate-700 mt-1">Name: <strong>{profile.customer.fullName || 'Not provided'}</strong></p>
+                  <p className="text-xs text-slate-600 break-all mt-1">Email: {profile.customer.email || 'Not provided'}</p>
+                  <p className="text-xs text-slate-600 break-all">Username: {profile.customer.username || 'Not set'}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5">
                   <p className="text-[11px] font-semibold text-slate-500 uppercase">Account Status</p>
@@ -200,7 +200,7 @@ export function CustomerDetailModal({
               <div className="rounded-xl bg-slate-50 border border-slate-200 px-3.5 py-2 text-[11px] text-slate-600 flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-slate-500 shrink-0" />
                 <span>
-                  Privacy enforcement active: customer wallet balances and credentials are omitted from administrative inspection.
+                  Credentials and password hashes are never shown. Wallet balances are visible to authorized administrators in read-only mode; wallet changes are not available here.
                 </span>
               </div>
 
@@ -325,6 +325,28 @@ export function CustomerDetailModal({
               {/* Section 3: Deposits, Withdrawals, Saved Payout Account */}
               {section === 'finance' && (
                 <div className="space-y-4">
+                  <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-bold uppercase text-slate-700">Wallet Summary · View Only</h4>
+                      <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700">No balance controls</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        ['Available', profile.wallet?.availableBalance],
+                        ['Reserved', profile.wallet?.reservedBalance],
+                        ['Promo Credit', profile.wallet?.promotionalCredit],
+                        ['Total Earnings', profile.wallet?.totalEarnings],
+                        ['Rewards', profile.wallet?.totalRewards],
+                        ['Team Commission', profile.wallet?.teamCommission],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[10px] text-slate-500">{label}</p>
+                          <p className="mt-1 text-sm font-extrabold tabular-nums text-slate-900">{formatBrExact(Number(value || 0))}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-slate-500">Financial history is visible for review. This dashboard does not provide any action to add or deduct wallet funds.</p>
+                  </section>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
                       <h4 className="text-xs font-bold uppercase text-slate-700">Deposit Requests</h4>
@@ -379,6 +401,30 @@ export function CustomerDetailModal({
                 </div>
               )}
 
+
+                  <section className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                    <h4 className="text-xs font-bold uppercase text-slate-700">Wallet Ledger History · View Only ({profile.transactions?.length || 0})</h4>
+                    {!profile.transactions?.length ? (
+                      <p className="text-xs text-slate-500">No wallet entries recorded.</p>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                        {profile.transactions.map((entry) => (
+                          <div key={entry.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800">{entry.note || entry.type.replaceAll('_', ' ')}</p>
+                              <p className="mt-0.5 text-[10px] text-slate-400">{new Date(entry.createdAt).toLocaleString()}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className={entry.amountSigned >= 0 ? 'font-bold text-emerald-700 tabular-nums' : 'font-bold text-red-700 tabular-nums'}>
+                                {entry.amountSigned >= 0 ? '+' : ''}{formatBrExact(entry.amountSigned)}
+                              </p>
+                              <p className="text-[10px] text-slate-500">Balance after: {formatBrExact(entry.balanceAfter)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
               {/* Section 4: Plan Purchases, Daily Check-ins, Daily Claims */}
               {section === 'plans' && (
                 <div className="space-y-4">

@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -24,8 +24,6 @@ import { GiftCodePage } from './pages/GiftCodePage';
 import { AchievementCelebration } from './components/AchievementCelebration';
 import { NewCustomerGuide } from './components/NewCustomerGuide';
 import { WelcomeCelebration } from './components/WelcomeCelebration';
-
-const CommunityPage = React.lazy(() => import('./pages/CommunityPage').then((module) => ({ default: module.CommunityPage })));
 
 function RequireAuth({
   children,
@@ -146,16 +144,6 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <TeamPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/community"
-          element={
-            <RequireAuth>
-              <Suspense fallback={<div className="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-white px-5 py-14 text-center text-sm font-semibold text-slate-600">Loading your community…</div>}>
-                <CommunityPage />
-              </Suspense>
             </RequireAuth>
           }
         />

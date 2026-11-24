@@ -21,11 +21,13 @@ import {
   Wallet,
   X,
   XCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import { AppShell } from '../components/AppShell';
 import { AuthenticatedImage } from '../components/AuthenticatedImage';
 import { CustomerDetailModal } from '../components/admin/CustomerDetailModal';
+import { BusinessRulesManager } from '../components/admin/BusinessRulesManager';
 import { useAuth } from '../context/AuthContext';
 import { formatBrExact, formatEtb } from '../shared/finance';
 import type {
@@ -48,6 +50,8 @@ type AdminTab =
   | 'broadcasts'
   | 'payment_methods'
   | 'gift_codes'
+  | 'plans'
+  | 'tasks'
   | 'audit';
 
 const parseClockMinutes = (value: string) => {
@@ -713,10 +717,12 @@ export function AdminDashboardPage() {
     { id: 'customers', label: 'Customer Management', icon: Users },
     { id: 'deposits', label: 'Deposit Requests', icon: Wallet },
     { id: 'withdrawals', label: 'Withdrawal Requests', icon: Landmark },
-    { id: 'tickets', label: 'Feedback and Complaints', icon: MessageSquare },
+    { id: 'tickets', label: 'Customer Inbox', icon: MessageSquare },
     { id: 'broadcasts', label: 'Broadcast Messages', icon: Megaphone },
     { id: 'payment_methods', label: 'Payment Settings', icon: Settings },
     { id: 'gift_codes', label: 'Gift Code Management', icon: Gift },
+    { id: 'plans', label: 'Investment Plans', icon: SlidersHorizontal },
+    { id: 'tasks', label: 'Task Management', icon: ClipboardList },
     { id: 'audit', label: 'Admin Activity/Audit Log', icon: ClipboardList },
   ];
 
@@ -744,8 +750,9 @@ export function AdminDashboardPage() {
           )}
         </div>
 
-        {/* Section Navigation Bar */}
-        <nav aria-label="Admin Dashboard Sections" className="flex flex-wrap gap-1.5 bg-white p-2 rounded-2xl border border-slate-200">
+        {/* Admin sections: vertical controls on the left, workspace on the right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <nav aria-label="Admin Dashboard Sections" className="lg:col-span-3 flex flex-row flex-wrap lg:flex-col lg:items-stretch gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 lg:sticky lg:top-20">
           {tabs.map((t) => {
             const Icon = t.icon;
             const count = t.id === 'deposits'
@@ -786,6 +793,7 @@ export function AdminDashboardPage() {
             );
           })}
         </nav>
+        <div className="min-w-0 lg:col-span-9 space-y-5">
 
         {statusMsg && (
           <div role="status" className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
@@ -798,7 +806,10 @@ export function AdminDashboardPage() {
           </div>
         )}
 
-        {/* 1. DASHBOARD OVERVIEW (Strictly Zero Customer Wallet Balances) */}
+        {tab === 'plans' && <BusinessRulesManager mode="plans" />}
+        {tab === 'tasks' && <BusinessRulesManager mode="tasks" />}
+
+        {/* 1. DASHBOARD OVERVIEW */}
         {tab === 'overview' && overview && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl p-4 border border-slate-200 flex flex-wrap items-end gap-3">
@@ -901,7 +912,7 @@ export function AdminDashboardPage() {
               <div>
                 <h3 className="font-bold text-sm text-slate-900">Registered Customer Directory</h3>
                 <p className="text-xs text-slate-500">
-                  Search by phone or referral code, inspect activity profile, or manage account access. Wallet balances are restricted from Admin view.
+                  Search by phone, referral code, email, or username. View customer data and wallet balances without any balance-editing controls.
                 </p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
@@ -930,7 +941,7 @@ export function AdminDashboardPage() {
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                     <tr>
-                      <th className="px-4 py-3">Customer Phone</th>
+                      <th className="px-4 py-3">Customer Account</th>
                       <th className="px-4 py-3">Referral Code</th>
                       <th className="px-4 py-3">Invited By</th>
                       <th className="px-4 py-3">Activity Counts</th>
@@ -942,7 +953,10 @@ export function AdminDashboardPage() {
                   <tbody className="divide-y divide-slate-100">
                     {usersList.map((u) => (
                       <tr key={u.id}>
-                        <td className="px-4 py-3 font-mono font-bold text-slate-900">{u.phone}</td>
+                        <td className="px-4 py-3">
+                          <p className="font-mono font-bold text-slate-900">{u.phone}</p>
+                          {(u.email || u.username) && <p className="mt-0.5 text-[11px] text-slate-500 break-all">{u.email || u.username}</p>}
+                        </td>
                         <td className="px-4 py-3 font-mono text-xs text-slate-700">{u.referralCode}</td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {u.invitedByPhone ? `${u.invitedByPhone} (${u.invitedByCode})` : 'Direct'}
@@ -1311,7 +1325,7 @@ export function AdminDashboardPage() {
         {tab === 'tickets' && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-bold text-sm text-slate-900">Customer Feedback &amp; Complaints</h3>
+              <h3 className="font-bold text-sm text-slate-900">Customer Inbox</h3>
               <div className="flex flex-wrap gap-1.5">
                 {(['all', 'unread', 'open', 'in_progress', 'resolved', 'closed'] as const).map((f) => (
                   <button
@@ -2309,8 +2323,9 @@ export function AdminDashboardPage() {
             )}
           </div>
         )}
+        </div>
+        </div>
       </div>
-
 
       {/* Withdrawal Request Details Modal */}
       {selectedWithdrawal && (

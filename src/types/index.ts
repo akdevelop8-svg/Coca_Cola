@@ -220,10 +220,14 @@ export interface BroadcastItem {
 }
 
 export interface CustomerDetailProfile {
+  wallet?: Pick<WalletSummary, 'availableBalance' | 'reservedBalance' | 'promotionalCredit' | 'totalEarnings' | 'totalRewards' | 'teamCommission'>;
+  transactions?: LedgerTransaction[];
   customer: {
     id: string;
     fullName: string;
     nickname?: string | null;
+    username?: string | null;
+    email?: string | null;
     phone: string;
     role: UserRole;
     status: 'active' | 'suspended';

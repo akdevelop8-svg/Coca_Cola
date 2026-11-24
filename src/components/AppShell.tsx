@@ -4,7 +4,6 @@ import {
   Bell,
   Briefcase,
   CreditCard,
-  Globe,
   Headphones,
   Home,
   Info,
@@ -23,6 +22,7 @@ import { CocaColaScriptLogo, UserAvatar } from './BrandMark';
 import { ColaRiverAccent, SidebarColaPourAccent } from './ColaRiverAccent';
 import { getCustomerDisplayName } from '../shared/finance';
 import { isAdminRole } from '../shared/roles';
+import { NotificationToast } from './NotificationToast';
 
 interface NavItem {
   to: string;
@@ -34,13 +34,12 @@ const MAIN_NAV: NavItem[] = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/income', label: 'Income', icon: TrendingUp },
   { to: '/team', label: 'Team', icon: Users },
-  { to: '/community', label: 'Community', icon: Globe },
   { to: '/task', label: 'Task', icon: Trophy },
   { to: '/recharge', label: 'Recharge', icon: Wallet },
   { to: '/withdraw', label: 'Withdraw', icon: CreditCard },
   { to: '/my', label: 'My', icon: UserIcon },
   { to: '/about', label: 'About', icon: Info },
-  { to: '/service', label: 'Customer Service', icon: Headphones },
+  { to: '/service', label: 'Inbox / Support', icon: Headphones },
 ];
 
 const MOBILE_BOTTOM_NAV: NavItem[] = [
@@ -74,7 +73,7 @@ export function AppShell({
   const displayName = getCustomerDisplayName(user);
 
   return (
-    <div className="cc-site-backdrop min-h-screen text-white flex">
+    <div className="cc-site-backdrop min-h-screen text-slate-900 flex bg-slate-50">
       {/* Desktop Fixed Left Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-gradient-to-b from-[#C81018] via-[#A3080C] to-[#7A0407] text-white z-30 shadow-xl">
         <div className="px-5 py-5 flex items-center justify-center border-b border-white/15">
@@ -262,10 +261,11 @@ export function AppShell({
 
         {/* Page Content */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-24 lg:pb-10">
+          <NotificationToast />
           {children}
           <ColaRiverAccent />
           {config?.settings?.privacyPolicyUrl && (
-            <footer className="mt-6 border-t border-white/25 pt-4 pb-2 text-center text-xs text-white/75">
+            <footer className="mt-6 border-t border-slate-200 pt-4 pb-2 text-center text-xs text-slate-500">
               <a
                 href={config.settings.privacyPolicyUrl}
                 target="_blank"

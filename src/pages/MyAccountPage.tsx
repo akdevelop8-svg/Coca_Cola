@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  CheckCircle2,
   ChevronRight,
   CreditCard,
   FileText,
@@ -12,7 +11,6 @@ import {
   LogOut,
   ScrollText,
   ShieldCheck,
-  UserCheck,
   Wallet,
   X,
 } from 'lucide-react';
@@ -24,25 +22,15 @@ import {
   formatEtb,
   getCustomerDisplayName,
   MAX_ACTIVE_PLANS,
-  validateNickname,
 } from '../shared/finance';
 import { isAdminRole } from '../shared/roles';
-import type { UserProfile, WalletSummary } from '../types';
+import type { WalletSummary } from '../types';
 
 export function MyAccountPage() {
-  const { user, config, setUserState, logout, refreshConfig } = useAuth();
+  const { user, config, logout, refreshConfig } = useAuth();
   const navigate = useNavigate();
   const [summary, setSummary] = useState<WalletSummary | null>(null);
   const [rulesModal, setRulesModal] = useState(false);
-
-  const [nicknameInput, setNicknameInput] = useState(user?.nickname || '');
-  const [savingNickname, setSavingNickname] = useState(false);
-  const [nicknameError, setNicknameError] = useState('');
-  const [nicknameSuccess, setNicknameSuccess] = useState('');
-
-  useEffect(() => {
-    setNicknameInput(user?.nickname || '');
-  }, [user?.nickname]);
 
   useEffect(() => {
     void Promise.all([
@@ -50,37 +38,6 @@ export function MyAccountPage() {
       refreshConfig(),
     ]);
   }, []);
-
-  const handleSaveNickname = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setNicknameError('');
-    setNicknameSuccess('');
-    const check = validateNickname(nicknameInput);
-    if (!check.ok) {
-      setNicknameError(check.error || 'Please enter a valid nickname.');
-      return;
-    }
-
-    setSavingNickname(true);
-    try {
-      const res = await apiFetch<{ ok: boolean; nickname: string; user: UserProfile; message?: string }>(
-        '/api/profile/nickname',
-        {
-          method: 'PUT',
-          body: JSON.stringify({ nickname: check.value }),
-        }
-      );
-      if (res.user) {
-        setUserState(res.user);
-      }
-      setNicknameInput(res.nickname || check.value);
-      setNicknameSuccess(res.message || 'Nickname saved successfully.');
-    } catch (err: any) {
-      setNicknameError(err?.message || 'Could not save nickname.');
-    } finally {
-      setSavingNickname(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -177,65 +134,6 @@ export function MyAccountPage() {
           </div>
         </section>
 
-        {/* Set Your Nickname Card */}
-        <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs p-5 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-red-50 text-[#D71920] flex items-center justify-center shrink-0">
-                <UserCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-slate-900">Set Your Nickname</h3>
-                <p className="text-xs text-slate-500">
-                  Displayed across your profile, home greeting, and team records (phone number remains your login ID).
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <form onSubmit={handleSaveNickname} className="flex flex-col sm:flex-row gap-2.5">
-            <div className="flex-1">
-              <label htmlFor="nickname-input" className="sr-only">
-                Preferred Nickname
-              </label>
-              <input
-                id="nickname-input"
-                data-testid="nickname-input"
-                type="text"
-                maxLength={24}
-                value={nicknameInput}
-                onChange={(e) => {
-                  setNicknameInput(e.target.value);
-                  if (nicknameError) setNicknameError('');
-                  if (nicknameSuccess) setNicknameSuccess('');
-                }}
-                placeholder="Enter your nickname (2–24 characters)"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#D71920]/30 focus:border-[#D71920]"
-              />
-            </div>
-            <button
-              type="submit"
-              data-testid="save-nickname-btn"
-              disabled={savingNickname}
-              className="px-5 py-2.5 rounded-xl bg-[#D71920] hover:bg-[#B80D13] text-white text-sm font-bold disabled:opacity-60 cursor-pointer shrink-0"
-            >
-              {savingNickname ? 'Saving...' : 'Save Nickname'}
-            </button>
-          </form>
-
-          {nicknameError && (
-            <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-xs text-red-700">
-              {nicknameError}
-            </div>
-          )}
-          {nicknameSuccess && (
-            <div role="status" className="rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs text-emerald-800 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>{nicknameSuccess}</span>
-            </div>
-          )}
-        </section>
-
         {/* Menu Rows including conditional Gift Code and Logout */}
         <nav aria-label="My Account Menu" className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs divide-y divide-slate-100 overflow-hidden">
           {menuRows.map((row) => {
@@ -290,8 +188,8 @@ export function MyAccountPage() {
               <p><strong>Terms Version Accepted:</strong> {user?.termsAcceptedVersion || 'Pending'}</p>
               <p><strong>Currency:</strong> ETB wallet balance</p>
               <p><strong>Registration Bonus:</strong> {config?.settings.registrationBonus ?? 150} ETB</p>
-              <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (manual claim once/day)</p>
-              <p><strong>Active Plan Limit:</strong> Maximum {MAX_ACTIVE_PLANS} active plans (365-day manual daily claim)</p>
+              <p><strong>Daily Check-In:</strong> {config?.settings.dailyCheckinAmount ?? 2} ETB (first claim after 24 hours, then every 24 hours)</p>
+              <p><strong>Active Plan Limit:</strong> Maximum {MAX_ACTIVE_PLANS} active plans (first mining claim after 24 hours, then every 24 hours)</p>
               <p><strong>Referral Rewards:</strong> Level 1: {config?.settings.referralLevel1Percent ?? 20}%, Level 2: {config?.settings.referralLevel2Percent ?? 2}%, Level 3: {config?.settings.referralLevel3Percent ?? 1}%</p>
             </div>
           </div>

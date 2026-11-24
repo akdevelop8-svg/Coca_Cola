@@ -33,6 +33,7 @@ import { celebrateAchievement } from '../shared/experience';
 export function HomePage() {
   const { user, config, refreshConfig } = useAuth();
   const displayName = getCustomerDisplayName(user);
+  const displayPlans = config?.investmentPlans?.length ? config.investmentPlans : INVESTMENT_PLANS;
   const navigate = useNavigate();
   const plansSectionRef = useRef<HTMLElement | null>(null);
 
@@ -483,20 +484,20 @@ export function HomePage() {
 
           <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2">
             <span>
-              Plans are purchased from your available ETB wallet balance (max {MAX_ACTIVE_PLANS} active plans, 365-day manual daily claim).
+              Plans are purchased from your available ETB wallet balance (max {MAX_ACTIVE_PLANS} active plans; each mining claim unlocks every 24 hours).
             </span>
             <span className="font-semibold text-slate-900 tabular-nums">
               Available: {formatEtb(summary?.availableBalance ?? 0)}
             </span>
           </div>
 
-          <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {INVESTMENT_PLANS.map((plan) => (
+          <div className="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {displayPlans.map((plan) => (
               <div
                 key={plan.code}
                 data-testid={`plan-card-${plan.code}`}
                 className={`rounded-2xl border border-slate-200 bg-[#FAFBFD] p-3.5 flex flex-col justify-between ${
-                  plan.code === 'M' ? 'sm:col-span-2 lg:col-span-4' : ''
+                  plan.code === 'M' ? 'col-span-2 lg:col-span-4' : ''
                 }`}
               >
                 <div>

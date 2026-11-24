@@ -61,6 +61,8 @@ export function WithdrawPage() {
   const [summary, setSummary] = useState<WalletSummary | null>(null);
   const [payoutAccount, setPayoutAccount] = useState<PayoutAccountRecord | null>(null);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [hasPurchasedPlan, setHasPurchasedPlan] = useState(false);
+  const [withdrawalUsedToday, setWithdrawalUsedToday] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ethiopiaClockMinutes, setEthiopiaClockMinutes] = useState(getEthiopianClockMinuteOfDay);
 
@@ -89,11 +91,13 @@ export function WithdrawPage() {
       const [sRes, pRes, wRes] = await Promise.all([
         apiFetch<WalletSummary>('/api/dashboard/summary'),
         apiFetch<{ account: PayoutAccountRecord | null }>('/api/payout-account'),
-        apiFetch<{ withdrawals: WithdrawalRequest[] }>('/api/withdrawals'),
+        apiFetch<{ withdrawals: WithdrawalRequest[]; hasPurchasedPlan: boolean; withdrawalUsedToday: boolean; canWithdrawToday: boolean }>('/api/withdrawals'),
       ]);
       setSummary(sRes);
       setPayoutAccount(pRes.account);
       setWithdrawals(wRes.withdrawals);
+      setHasPurchasedPlan(Boolean(wRes.hasPurchasedPlan));
+      setWithdrawalUsedToday(Boolean(wRes.withdrawalUsedToday));
     } catch (err: any) {
       setError(err?.message || 'Unable to load withdrawal details right now.');
     } finally {
@@ -138,6 +142,7 @@ export function WithdrawPage() {
     isWithdrawalWindowOpen &&
     !loading &&
     payoutAccount?.status === 'approved' &&
+    hasPurchasedPlan && !withdrawalUsedToday &&
     breakdown.isValid;
 
   const handleOpenConfirm = (e: React.FormEvent) => {
@@ -151,6 +156,14 @@ export function WithdrawPage() {
     }
     if (!isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime)) {
       setError(`Withdrawal requests are accepted daily only during ${currentWithdrawalWindowLabel}.`);
+      return;
+    }
+    if (!hasPurchasedPlan) {
+      setError('Purchase at least one investment plan before requesting a withdrawal.');
+      return;
+    }
+    if (withdrawalUsedToday) {
+      setError('Only one withdrawal request is allowed per Ethiopia calendar day.');
       return;
     }
     if (!payoutAccount) {
@@ -179,6 +192,11 @@ export function WithdrawPage() {
       setConfirmOpen(false);
       setError(`Withdrawal requests are accepted daily only during ${currentWithdrawalWindowLabel}.`);
       setEthiopiaClockMinutes(getEthiopianClockMinuteOfDay());
+      return;
+    }
+    if (!hasPurchasedPlan || withdrawalUsedToday) {
+      setConfirmOpen(false);
+      setError(!hasPurchasedPlan ? 'Purchase at least one investment plan before requesting a withdrawal.' : 'Only one withdrawal request is allowed per Ethiopia calendar day.');
       return;
     }
     setSubmitting(true);
@@ -316,6 +334,16 @@ export function WithdrawPage() {
                 )}
               </div>
 
+              {!hasPurchasedPlan && (
+                <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  Purchase at least one plan before requesting a withdrawal.
+                </div>
+              )}
+              {hasPurchasedPlan && withdrawalUsedToday && (
+                <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  You have already submitted today&apos;s withdrawal request. You can submit again after the Ethiopia calendar date changes.
+                </div>
+              )}
               <div>
                 <label htmlFor="withdraw-amount" className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Withdrawal Amount (Br / ETB)
@@ -397,7 +425,7 @@ export function WithdrawPage() {
               </button>
 
               <p className="text-[11px] text-slate-500 text-center">
-                Reserved balance during pending review: {formatBrExact(summary?.reservedBalance ?? 0)} · Purchase Limit ({settings?.purchaseLimit ?? 2}) is separate from withdrawal limits.
+                Reserved balance during pending review: {formatBrExact(summary?.reservedBalance ?? 0)} · One withdrawal request per Ethiopia calendar day · A plan purchase is required.
               </p>
             </form>
           </div>
