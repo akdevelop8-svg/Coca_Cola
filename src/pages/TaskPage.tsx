@@ -90,7 +90,7 @@ export function TaskPage() {
             Team Task Reward
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Grow your team. Unlock your rewards.
+            Team rewards
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export function TaskPage() {
         )}
 
         {/* 5 Level Milestone Cards in 2-Column Grid */}
-        <section aria-label="Team deposit reward levels" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+        <section aria-label="Team rewards" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           {(data?.valueTasks || []).map((task) => {
             const canClaimNow = task.enabled !== false && task.eligible && !task.claimed;
             const isClaiming = claimingId === task.id;
@@ -237,7 +237,7 @@ export function TaskPage() {
 
         {/* Bottom Disclaimer Note matching reference */}
         <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed pt-1">
-          Rewards are credited once per level to your Coca-Cola wallet after you claim without any deductions. Unverified submissions and pending or rejected recharge requests do not count. An approved recharge is not automatically a bank payout.
+          Claim each level once. Only approved deposits count; rewards have no deductions and are not bank payouts.
         </p>
       </div>
     </AppShell>
