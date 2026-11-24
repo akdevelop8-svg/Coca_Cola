@@ -71,7 +71,7 @@ export function CheckinPage() {
       });
       setStatusMsg(res.message);
       celebrateAchievement({
-        title: 'Daily Check-In Complete',
+        title: 'Check-In Complete',
         description: 'Your daily check-in was confirmed successfully.',
         category: 'reward',
       });
@@ -90,7 +90,7 @@ export function CheckinPage() {
   const claimedToday = !canClaimNow;
 
   return (
-    <AppShell title="Daily Check-In">
+    <AppShell title="Check-In">
       <div className="max-w-3xl mx-auto space-y-5">
         {/* Banner */}
         <section className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#D71920] to-[#98080D] text-white p-5 sm:p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
@@ -99,14 +99,14 @@ export function CheckinPage() {
               <CalendarCheck className="w-6 h-6 text-amber-300" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold">Daily Check-In</h2>
+              <h2 className="text-xl sm:text-2xl font-bold">Check-In</h2>
               <p className="text-xs sm:text-sm text-white/85 mt-0.5">
-                Manual claim only · +{data?.rewardAmount ?? 2} ETB every 24 hours
+                Manual · +{data?.rewardAmount ?? 2} ETB / 24h
               </p>
             </div>
           </div>
           <div className="bg-white/15 rounded-2xl px-4 py-2.5 text-right">
-            <p className="text-[11px] text-white/80">Wallet Balance</p>
+            <p className="text-[11px] text-white/80">Balance</p>
             <p data-testid="checkin-wallet-balance" className="text-base sm:text-lg font-extrabold tabular-nums">
               {loading ? '...' : formatEtb(data?.availableBalance ?? 0)}
             </p>
@@ -131,16 +131,16 @@ export function CheckinPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <Clock className="w-3.5 h-3.5" />
-              <span>Today (Ethiopia Time): <strong className="font-mono text-slate-800">{data?.ethiopiaDate || '...'}</strong></span>
+              <span>Ethiopia date: <strong className="font-mono text-slate-800">{data?.ethiopiaDate || '...'}</strong></span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Coins className="w-5 h-5 text-[#D71920]" />
-              <span>Daily Reward: {data?.rewardAmount ?? 2} ETB</span>
+              <span>Reward: {data?.rewardAmount ?? 2} ETB</span>
             </h3>
             <p className="text-xs text-slate-500">
               {claimedToday
-                ? `Your next reward unlocks in ${formatCountdown(remainingSeconds)}.`
-                : 'Your 24-hour waiting period is complete. You can claim now.'}
+                ? `Next claim in ${formatCountdown(remainingSeconds)}.`
+                : 'Ready to claim.'}
             </p>
           </div>
 
@@ -168,13 +168,13 @@ export function CheckinPage() {
         {/* Check-In History */}
         <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-slate-900 text-white px-5 py-3.5 text-sm font-bold">
-            Daily Check-In History
+            Check-In History
           </div>
           {loading ? (
             <p className="p-6 text-center text-sm text-slate-500">Loading history...</p>
           ) : !(data?.history || []).length ? (
             <p className="p-8 text-center text-sm text-slate-500">
-              No daily check-ins claimed yet. Your first claim unlocks 24 hours after registration.
+              First claim unlocks 24h after signup.
             </p>
           ) : (
             <div className="divide-y divide-slate-100">
