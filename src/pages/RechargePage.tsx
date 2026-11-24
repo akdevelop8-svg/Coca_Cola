@@ -131,7 +131,7 @@ export function RechargePage() {
                 </h2>
                 <p className="text-xs text-white/85">
                   {config?.financialOperationsEnabled
-                    ? 'Send to the verified account below, then submit your reference & receipt'
+                    ? 'Transfer, then add your reference and receipt'
                     : 'Deposits are currently disabled. Do not transfer funds.'}
                 </p>
               </div>
@@ -177,15 +177,15 @@ export function RechargePage() {
               ) : (
                 <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
                   {config?.financialOperationsEnabled
-                    ? 'No active deposit payment methods are currently enabled.'
-                    : 'Deposits are currently disabled. Do not send money to any bank account. The deposit form will become available only after the platform enables financial operations.'}
+                    ? 'No deposit methods are active.'
+                    : 'Deposits are disabled. Do not send money.'}
                 </div>
               )}
 
               {methods.length > 1 && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Select Payment Method
+                    Payment Method
                   </label>
                   <select
                     value={selectedMethodId}
@@ -203,7 +203,7 @@ export function RechargePage() {
 
               <div>
                 <label htmlFor="deposit-amount" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Deposit Amount (Br / ETB)
+                  Amount (ETB)
                 </label>
                 <input
                   id="deposit-amount"
@@ -232,7 +232,7 @@ export function RechargePage() {
 
               <div>
                 <label htmlFor="deposit-ref" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Transaction Reference / Short Code
+                  Referenceerence
                 </label>
                 <input
                   id="deposit-ref"
@@ -247,7 +247,7 @@ export function RechargePage() {
 
               <div>
                 <label htmlFor="deposit-receipt" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Upload Payment Receipt (JPG, PNG, WEBP, PDF · max 5MB)
+                  Payment Receipt (image or PDF · max 5MB)
                 </label>
                 <label
                   htmlFor="deposit-receipt"
@@ -255,7 +255,7 @@ export function RechargePage() {
                 >
                   <UploadCloud className="w-7 h-7 text-[#D71920]" />
                   <span className="text-xs font-medium text-slate-700 text-center">
-                    {receiptFile ? receiptFile.name : 'Click to attach payment receipt screenshot or PDF'}
+                    {receiptFile ? receiptFile.name : 'Attach receipt (image or PDF)'}
                   </span>
                   <input
                     id="deposit-receipt"
@@ -283,7 +283,7 @@ export function RechargePage() {
                 disabled={!selectedMethod || submitting}
                 className="w-full min-h-[46px] rounded-full bg-gradient-to-r from-[#E11D24] to-[#B80D13] text-white font-semibold text-sm shadow-md disabled:opacity-50 cursor-pointer"
               >
-                Review &amp; Submit Deposit
+                Review Deposit
               </button>
             </form>
           </div>
@@ -292,13 +292,13 @@ export function RechargePage() {
           <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center gap-2 text-sm font-bold">
               <FileText className="w-4 h-4" />
-              <span>{displayName} — Deposit Request History</span>
+              <span>{displayName} — Deposit History</span>
             </div>
             <div className="p-4">
               {loading ? (
                 <p className="text-sm text-slate-500 text-center py-8">Loading deposits...</p>
               ) : deposits.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">No deposit requests submitted yet.</p>
+                <p className="text-sm text-slate-500 text-center py-8">No deposits yet.</p>
               ) : (
                 <div className="divide-y divide-slate-100 space-y-2">
                   {deposits.map((dep) => (
@@ -343,7 +343,7 @@ export function RechargePage() {
       {confirmOpen && selectedMethod && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Confirm Deposit Submission</h3>
+            <h3 className="text-lg font-bold text-slate-900">Confirm Deposit</h3>
             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Method</span>
@@ -354,20 +354,20 @@ export function RechargePage() {
                 <strong className="font-mono">{selectedMethod.accountNumber}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Deposit Amount</span>
+                <span className="text-slate-500">Amount</span>
                 <strong className="text-[#D71920] tabular-nums">{formatBrExact(Number(amount))}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Transaction Ref</span>
+                <span className="text-slate-500">Reference</span>
                 <strong className="font-mono">{txReference}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Receipt File</span>
+                <span className="text-slate-500">Receipt</span>
                 <strong className="truncate max-w-[180px]">{receiptFile?.name}</strong>
               </div>
             </div>
             <p className="text-xs text-slate-500">
-              Your wallet will remain unchanged until an administrator independently verifies this receipt and approves the deposit.
+              Wallet unchanged until admin approval.
             </p>
             <div className="flex gap-3">
               <button

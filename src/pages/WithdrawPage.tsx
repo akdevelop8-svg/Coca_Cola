@@ -151,7 +151,7 @@ export function WithdrawPage() {
     setSuccess('');
 
     if (!withdrawalEnabled) {
-      setError('Customer withdrawals are currently disabled by the administrator.');
+      setError('Withdrawals are disabled.');
       return;
     }
     if (!isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime)) {
@@ -159,19 +159,19 @@ export function WithdrawPage() {
       return;
     }
     if (!hasPurchasedPlan) {
-      setError('Purchase at least one investment plan before requesting a withdrawal.');
+      setError('Buy at least one plan to withdraw.');
       return;
     }
     if (withdrawalUsedToday) {
-      setError('Only one withdrawal request is allowed per Ethiopia calendar day.');
+      setError('One withdrawal request per Ethiopia day.');
       return;
     }
     if (!payoutAccount) {
-      setError('Save your payout account under Bank Account Management first.');
+      setError('Save a payout account first.');
       return;
     }
     if (payoutAccount.status !== 'approved') {
-      setError('Please save or update your payout details in Bank Account Management before requesting a withdrawal.');
+      setError('Update your payout account before withdrawing.');
       return;
     }
     if (!breakdown.isValid) {
@@ -185,7 +185,7 @@ export function WithdrawPage() {
     if (submitting) return;
     if (!withdrawalEnabled) {
       setConfirmOpen(false);
-      setError('Customer withdrawals are currently disabled by the administrator.');
+      setError('Withdrawals are disabled.');
       return;
     }
     if (!isWithinWithdrawalWindow(withdrawalStartTime, withdrawalEndTime)) {
@@ -196,7 +196,7 @@ export function WithdrawPage() {
     }
     if (!hasPurchasedPlan || withdrawalUsedToday) {
       setConfirmOpen(false);
-      setError(!hasPurchasedPlan ? 'Purchase at least one investment plan before requesting a withdrawal.' : 'Only one withdrawal request is allowed per Ethiopia calendar day.');
+      setError(!hasPurchasedPlan ? 'Buy at least one plan to withdraw.' : 'One withdrawal request per Ethiopia day.');
       return;
     }
     setSubmitting(true);
@@ -290,7 +290,7 @@ export function WithdrawPage() {
                   <div className="flex items-center gap-2">
                     <Landmark className="w-4 h-4 text-[#D71920]" />
                     <span className="text-xs font-bold text-slate-900">
-                      Your Saved Payout Method: {activePayoutNames}
+                      Payout: {activePayoutNames}
                     </span>
                   </div>
                   <Link
@@ -303,11 +303,11 @@ export function WithdrawPage() {
 
                 {!payoutAccount ? (
                   <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    No payout account saved yet.{' '}
+                    No payout account saved.{' '}
                     <Link to="/my/bank-account" className="font-bold underline">
-                      Save your payout account
+                      Save payout account
                     </Link>{' '}
-                    before requesting a withdrawal. Admin approval is not required.
+                    before requesting a withdrawal. No admin approval needed.
                   </div>
                 ) : (
                   <div className="flex items-center justify-between text-xs pt-1">
@@ -341,12 +341,12 @@ export function WithdrawPage() {
               )}
               {hasPurchasedPlan && withdrawalUsedToday && (
                 <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  You have already submitted today&apos;s withdrawal request. You can submit again after the Ethiopia calendar date changes.
+                  Withdrawal already requested today. Try again tomorrow (Ethiopia date).
                 </div>
               )}
               <div>
                 <label htmlFor="withdraw-amount" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Withdrawal Amount (Br / ETB)
+                  Amount (ETB)
                 </label>
                 <input
                   id="withdraw-amount"
@@ -364,16 +364,16 @@ export function WithdrawPage() {
               {/* Fee Preview Breakdown */}
               <div className="rounded-2xl bg-red-50/60 border border-red-200 p-4 space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Gross Request</span>
+                  <span className="text-slate-600">Gross</span>
                   <strong className="tabular-nums">{formatBrExact(breakdown.grossAmount)}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Withdrawal Fee ({feePercent}%)</span>
+                  <span className="text-slate-600">Fee ({feePercent}%)</span>
                   <strong className="text-red-700 tabular-nums">-{formatBrExact(breakdown.feeAmount)}</strong>
                 </div>
                 <div className="pt-2 border-t border-red-200 flex justify-between items-baseline gap-3 text-sm sm:text-base">
                   <span className="font-bold text-slate-900">
-                    Net Payout ({payoutAccount?.methodName || activePayoutNames})
+                    Net ({payoutAccount?.methodName || activePayoutNames})
                   </span>
                   <strong className="text-emerald-700 tabular-nums shrink-0 whitespace-nowrap">
                     {formatBrExact(breakdown.netAmount)}
@@ -398,10 +398,10 @@ export function WithdrawPage() {
                 }`}
               >
                 {!withdrawalEnabled
-                  ? `Customer withdrawals are currently disabled by the administrator. Published schedule: ${currentWithdrawalWindowLabel}.`
+                  ? `Withdrawals are disabled. Published schedule: ${currentWithdrawalWindowLabel}.`
                   : isWithdrawalWindowOpen
-                    ? `Withdrawal requests are open now. Daily schedule: ${currentWithdrawalWindowLabel}.`
-                    : `Withdrawal requests are closed right now. They are available daily only during ${currentWithdrawalWindowLabel}. Please return during that time.`}
+                    ? `Open now · ${currentWithdrawalWindowLabel}.`
+                    : `Closed now. Daily window: ${currentWithdrawalWindowLabel}.`}
               </div>
 
               {error && (
@@ -439,7 +439,7 @@ export function WithdrawPage() {
               {loading ? (
                 <p className="text-sm text-slate-500 text-center py-8">Loading withdrawals...</p>
               ) : withdrawals.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">No withdrawal requests yet.</p>
+                <p className="text-sm text-slate-500 text-center py-8">No withdrawals yet.</p>
               ) : (
                 <div className="divide-y divide-slate-100 space-y-2">
                   {withdrawals.map((w) => (
@@ -492,14 +492,14 @@ export function WithdrawPage() {
       {confirmOpen && payoutAccount && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Confirm {payoutAccount.methodName} Withdrawal</h3>
+            <h3 className="text-lg font-bold text-slate-900">Confirm</h3>
             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Method</span>
                 <strong>{payoutAccount.methodName}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Account Owner</span>
+                <span className="text-slate-500">Owner</span>
                 <strong>{payoutAccount.accountOwnerName}</strong>
               </div>
               <div className="flex justify-between">
@@ -507,7 +507,7 @@ export function WithdrawPage() {
                 <strong className="font-mono">{payoutAccount.maskedAccountNumber}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Gross Amount</span>
+                <span className="text-slate-500">Gross</span>
                 <strong className="tabular-nums">{formatBrExact(breakdown.grossAmount)}</strong>
               </div>
               <div className="flex justify-between">
@@ -533,7 +533,7 @@ export function WithdrawPage() {
                 onClick={handleConfirmWithdraw}
                 className="flex-1 py-2.5 rounded-full bg-[#D71920] text-white text-sm font-semibold cursor-pointer disabled:opacity-60"
               >
-                {submitting ? 'Submitting...' : isWithdrawalWindowOpen ? 'Confirm Withdrawal' : 'Withdrawal Window Closed'}
+                {submitting ? 'Submitting...' : isWithdrawalWindowOpen ? 'Confirm' : 'Closed'}
               </button>
             </div>
           </div>

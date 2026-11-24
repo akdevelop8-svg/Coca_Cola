@@ -61,8 +61,8 @@ export function CinematicAuthHero({
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white">Together for a Prosperous Future</p>
-              <p className="mt-0.5 text-[11px] text-white/65">A smoother way to explore your platform</p>
+              <p className="text-xs font-bold text-white">Simple. Secure. Connected.</p>
+              <p className="mt-0.5 text-[11px] text-white/65">Your tools in one place.</p>
             </div>
             <ArrowUpRight className="h-4 w-4 shrink-0 text-white/70" />
           </div>

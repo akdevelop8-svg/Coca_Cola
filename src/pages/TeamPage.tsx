@@ -86,7 +86,7 @@ export function TeamPage() {
       const copied = document.execCommand('copy');
       temporaryInput.remove();
       if (!copied) {
-        setCopyError('Automatic copy was blocked. Please press and hold the referral link above to copy it.');
+        setCopyError('Copy unavailable. Press and hold the link.');
         return;
       }
     }
@@ -107,10 +107,10 @@ export function TeamPage() {
         {/* Banner */}
         <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-[#D71920] to-[#98080D] text-white grid grid-cols-1 sm:grid-cols-12 shadow-md">
           <div className="sm:col-span-7 p-5 flex flex-col justify-center">
-            <p className="text-xs font-semibold text-white/85 mb-0.5">{displayName}&apos;s Referral Network</p>
-            <h2 className="text-xl sm:text-2xl font-bold">My 3-Level Referral Team</h2>
+            <p className="text-xs font-semibold text-white/85 mb-0.5">{displayName}&apos;s Team</p>
+            <h2 className="text-xl sm:text-2xl font-bold">3-Level Team</h2>
             <p className="text-xs sm:text-sm text-white/85 mt-1">
-              Qualifying status requires a verified product purchase. Registration alone does not award commission.
+              Verified plan purchases qualify for commission.
             </p>
           </div>
           <div className="sm:col-span-5 h-32 sm:h-auto overflow-hidden bg-white flex justify-center items-center">
@@ -133,21 +133,21 @@ export function TeamPage() {
         <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
           <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 text-center">
             <Users className="w-5 h-5 text-[#D71920] mx-auto mb-1" />
-            <p className="text-[11px] sm:text-xs text-slate-500">Qualifying Team</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Qualified</p>
             <p className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : data?.summary.qualifyingMembersCount ?? 0}
             </p>
           </div>
           <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 text-center">
             <Users className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-            <p className="text-[11px] sm:text-xs text-slate-500">Total Registered</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Registered</p>
             <p className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : data?.summary.totalRegisteredMembers ?? 0}
             </p>
           </div>
           <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 text-center">
             <TrendingUp className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
-            <p className="text-[11px] sm:text-xs text-slate-500">Team Income</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Earnings</p>
             <p className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : formatEtb(data?.summary.teamCommission ?? 0)}
             </p>
@@ -182,11 +182,11 @@ export function TeamPage() {
           </div>
         </section>
 
-        {/* Invitation Code & Link Cards */}
+        {/* Invite Code & Link Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold text-slate-500">Invitation Code</p>
+              <p className="text-xs font-semibold text-slate-500">Invite Code</p>
               <p className="text-lg font-extrabold font-mono text-slate-900 mt-0.5">
                 {data?.invitationCode || '------'}
               </p>
@@ -222,7 +222,7 @@ export function TeamPage() {
               className="px-4 py-2 rounded-full bg-[#D71920] text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
               {copiedField === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedField === 'link' ? 'Copied' : 'Copy Referral Link'}</span>
+              <span>{copiedField === 'link' ? 'Copied' : 'Copy Link'}</span>
             </button>
           </div>
         </div>
@@ -237,17 +237,17 @@ export function TeamPage() {
           </div>
           <div className="p-4 divide-y divide-slate-100 text-sm">
             <div className="py-2 flex justify-between">
-              <span className="text-slate-600">Total Team Members</span>
+              <span className="text-slate-600">Members</span>
               <strong className="tabular-nums">{data?.summary.totalRegisteredMembers ?? 0}</strong>
             </div>
             <div className="py-2 flex justify-between">
-              <span className="text-slate-600">Qualifying Plan Volume</span>
+              <span className="text-slate-600">Qualified Volume</span>
               <strong className="tabular-nums">
                 {formatEtb(data?.summary.totalQualifyingVolume ?? 0)}
               </strong>
             </div>
             <div className="py-2 flex justify-between">
-              <span className="text-slate-600">Team Commission Earned</span>
+              <span className="text-slate-600">Commission</span>
               <strong className="tabular-nums">
                 {formatEtb(data?.summary.teamCommission ?? 0)}
               </strong>
@@ -285,7 +285,7 @@ export function TeamPage() {
           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>
-              Private member details are masked. Referral rewards are credited only after a qualifying plan purchase is recorded and remain subject to platform rules and funding availability.
+              Member details are masked. Commissions need a qualifying purchase and available funding.
             </span>
           </div>
 

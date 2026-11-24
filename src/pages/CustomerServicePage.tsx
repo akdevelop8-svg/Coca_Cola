@@ -49,7 +49,7 @@ export function CustomerServicePage() {
       });
       setSubject('');
       setMessage('');
-      setSuccess('Support ticket submitted. An administrator will respond shortly.');
+      setSuccess('Ticket sent. Admin will reply.');
       await loadTickets();
     } catch (err: any) {
       setError(err?.message || 'Failed to submit ticket.');
@@ -75,14 +75,14 @@ export function CustomerServicePage() {
   };
 
   return (
-    <AppShell title="Customer Service">
+    <AppShell title="Support">
       <div className="space-y-5">
-        {/* Official Telegram Customer Service Channels */}
+        {/* Official Telegram Support Channels */}
         <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-gradient-to-r from-[#D71920] to-[#A3080C] text-white px-5 py-4 flex items-center gap-3">
             <Headphones className="w-6 h-6" />
             <div>
-              <h2 className="text-base sm:text-lg font-bold">Customer Service &amp; Telegram Support</h2>
+              <h2 className="text-base sm:text-lg font-bold">Support</h2>
               <p className="text-xs text-white/85">
                 Reach our team directly via Telegram or submit a support ticket below
               </p>
@@ -121,7 +121,7 @@ export function CustomerServicePage() {
             onSubmit={handleSubmitTicket}
             className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 space-y-4 shadow-xs"
           >
-            <h3 className="text-base font-bold text-slate-900">Submit a Support Ticket</h3>
+            <h3 className="text-base font-bold text-slate-900">New Ticket</h3>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
@@ -143,7 +143,7 @@ export function CustomerServicePage() {
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Brief summary of your issue"
+                placeholder="Issue summary"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
                 required
               />
@@ -154,7 +154,7 @@ export function CustomerServicePage() {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your request in detail..."
+                placeholder="Write your message..."
                 rows={4}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
                 required
@@ -185,13 +185,13 @@ export function CustomerServicePage() {
           <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-[#D71920]" />
-              <h3 className="text-base font-bold text-slate-900">{displayName} — My Support Tickets</h3>
+              <h3 className="text-base font-bold text-slate-900">{displayName} — Tickets</h3>
             </div>
 
             {loading ? (
               <p className="text-sm text-slate-500 py-6 text-center">Loading tickets...</p>
             ) : tickets.length === 0 ? (
-              <p className="text-sm text-slate-500 py-8 text-center">No support tickets submitted yet.</p>
+              <p className="text-sm text-slate-500 py-8 text-center">No tickets yet.</p>
             ) : (
               <div className="space-y-4">
                 {tickets.map((t) => (
@@ -230,7 +230,7 @@ export function CustomerServicePage() {
                           onChange={(e) =>
                             setReplyText((prev) => ({ ...prev, [t.id]: e.target.value }))
                           }
-                          placeholder="Write a follow-up reply..."
+                          placeholder="Reply..."
                           className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs"
                         />
                         <button

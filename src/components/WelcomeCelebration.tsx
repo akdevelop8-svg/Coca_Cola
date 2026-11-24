@@ -198,12 +198,12 @@ export function WelcomeCelebration() {
         </div>
         <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[#642b35]">
           {isNew
-            ? 'We’re delighted you’re here. Your next chapter starts now.'
-            : 'It’s great to see you again. Your community and journey are ready for you.'}
+            ? 'Welcome to the platform.'
+            : 'Your account is ready.'}
         </p>
         <div className="cc-welcome-pill mt-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-bold text-white">
           <span className="h-2 w-2 rounded-full bg-[#D71920]" />
-          {isNew ? 'A fresh start begins' : 'Welcome back to your community'}
+          {isNew ? 'Let’s begin' : 'Welcome back'}
         </div>
       </section>
     </div>

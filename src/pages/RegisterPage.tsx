@@ -104,10 +104,10 @@ export function RegisterPage() {
       <CinematicAuthHero
         imageSrc="/assets/aistudio/factory_93c2daeb.jpg"
         imageAlt="Modern beverage bottling facility"
-        eyebrow="A fresh start begins here"
-        title={<>Create your account. <span className="text-amber-200">Explore what’s possible.</span></>}
-        description="Join the platform, review its terms and discover the tools available for your account and team."
-        footer="New account setup · Ethiopia (+251)"
+        eyebrow="GET STARTED"
+        title={<>Create your account.</>}
+        description="Create an account to access your dashboard and team tools."
+        footer="Ethiopia · +251"
       />
 
       {/* Right Register Card — Strictly 4 fields: Phone Number, Password, Confirm Password, Invitation Code */}
@@ -116,7 +116,7 @@ export function RegisterPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Register</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Create your platform account</p>
+              <p className="text-sm text-slate-500 mt-0.5">New account</p>
             </div>
             <div className="flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
               <Link
@@ -224,8 +224,8 @@ export function RegisterPage() {
               </div>
               <p className="mt-1.5 text-[11px] text-slate-500">
                 {refFromUrl
-                  ? 'This is your inviter’s code from the link. It is locked so the referral is recorded correctly.'
-                  : 'When you register from an invitation link, the inviter’s code will appear here automatically.'}
+                  ? 'Invite code from link; locked for accuracy.'
+                  : 'Auto-filled from invite link.'}
               </p>
             </div>
 

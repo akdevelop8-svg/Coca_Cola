@@ -131,7 +131,7 @@ export function IncomePage() {
       case 'plan_purchase':
         return 'Plan Purchase';
       case 'daily_mining_claim':
-        return 'Daily Mining Claim';
+        return 'Daily Claim';
       case 'referral_reward':
         return 'Referral Reward';
       case 'task_reward':
@@ -150,14 +150,14 @@ export function IncomePage() {
   };
 
   return (
-    <AppShell title="My Income & Plans">
+    <AppShell title="Income & Plans">
       <div className="space-y-5">
         {/* Top Banner */}
         <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-[#D71920] to-[#98080D] text-white grid grid-cols-1 sm:grid-cols-12 shadow-md">
           <div className="sm:col-span-7 p-5 flex flex-col justify-center">
-            <h2 className="text-xl sm:text-2xl font-bold">{displayName}&apos;s Purchased Plans &amp; Income</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">{displayName}&apos;s Plans &amp; Income</h2>
             <p className="text-xs sm:text-sm text-white/85 mt-1">
-              Lists only plans purchased by your account. Daily mining ETB is never added automatically — the first claim unlocks 24 hours after purchase, then every 24 hours.
+              First claim unlocks 24h after purchase, then every 24h. Claim manually.
             </p>
           </div>
           <div className="sm:col-span-5 h-32 sm:h-auto overflow-hidden">
@@ -174,7 +174,7 @@ export function IncomePage() {
         <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900 flex items-center gap-2.5">
           <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
           <span>
-            <strong>Wallet notice:</strong> Rewards are credited to the wallet ledger after a successful claim. Deposits and withdrawals follow administrator verification and approval.
+            <strong>Wallet:</strong> Rewards post after a claim. Deposits and withdrawals need admin approval.
           </span>
         </div>
 
@@ -185,7 +185,7 @@ export function IncomePage() {
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Active Purchased Plans</p>
+              <p className="text-xs text-slate-500">Active Plans</p>
               <p data-testid="income-active-count" className="text-xl font-extrabold text-slate-900 tabular-nums">
                 {loading ? '...' : `${data?.activePlansCount ?? 0} / ${MAX_ACTIVE_PLANS}`}
               </p>
@@ -197,7 +197,7 @@ export function IncomePage() {
               <Coins className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total Claimed Mining</p>
+              <p className="text-xs text-slate-500">Mining Claimed</p>
               <p data-testid="income-total-earnings" className="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums">
                 {loading ? '...' : formatEtb(data?.myIncome ?? 0)}
               </p>
@@ -220,25 +220,25 @@ export function IncomePage() {
 
         <section aria-label="Wallet balance breakdown" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
-            <p className="text-[11px] sm:text-xs text-slate-500">Registration Bonus &amp; Promo</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Bonus</p>
             <p data-testid="income-promo-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : formatEtb(data?.promotionalCredit ?? 0)}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
-            <p className="text-[11px] sm:text-xs text-slate-500">Check-In, Task &amp; Gift Rewards</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Other Rewards</p>
             <p data-testid="income-reward-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : formatEtb(data?.totalRewards ?? 0)}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
-            <p className="text-[11px] sm:text-xs text-slate-500">Referral Commissions</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Referrals</p>
             <p data-testid="income-commission-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : formatEtb(data?.teamCommission ?? 0)}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-xs">
-            <p className="text-[11px] sm:text-xs text-slate-500">Reserved for Withdrawals</p>
+            <p className="text-[11px] sm:text-xs text-slate-500">Reserved</p>
             <p data-testid="income-reserved-balance" className="mt-1 text-sm sm:text-base font-extrabold text-slate-900 tabular-nums">
               {loading ? '...' : formatEtb(data?.reservedBalance ?? 0)}
             </p>
@@ -263,7 +263,7 @@ export function IncomePage() {
             <h3 className="text-sm sm:text-base font-bold text-slate-900">My Purchased Plans</h3>
             {data?.todayEthiopiaDate && (
               <span className="text-xs font-mono text-slate-500">
-                Ethiopia Date: {data.todayEthiopiaDate}
+                Date: {data.todayEthiopiaDate}
               </span>
             )}
           </div>
@@ -275,7 +275,7 @@ export function IncomePage() {
               <FileSearch className="w-10 h-10 text-slate-300 mx-auto" />
               <p className="text-sm font-semibold text-slate-700">No purchased plans yet</p>
               <p className="text-xs text-slate-500">
-                Only plans actually purchased with your ETB balance appear here.
+                Your purchased plans appear here.
               </p>
             </div>
           ) : (
@@ -298,7 +298,7 @@ export function IncomePage() {
                         <h4 className="font-bold text-slate-900">Plan {p.planCode}</h4>
                         <p className="text-[11px] text-slate-500 flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          <span>Purchased: {new Date(p.startDate).toLocaleDateString()}</span>
+                          <span>Bought: {new Date(p.startDate).toLocaleDateString()}</span>
                         </p>
                       </div>
                     </div>
@@ -317,13 +317,13 @@ export function IncomePage() {
 
                   <div className="grid grid-cols-2 gap-2.5 rounded-xl bg-white border border-slate-200/80 p-3 text-xs">
                     <div>
-                      <p className="text-slate-500">Original Investment</p>
+                      <p className="text-slate-500">Invested</p>
                       <p className="font-bold text-slate-900 tabular-nums mt-0.5">
                         {formatEtb(p.amount)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Daily Mining</p>
+                      <p className="text-slate-500">Daily</p>
                       <p className="font-bold text-[#D71920] tabular-nums mt-0.5">
                         {formatEtb(p.dailyMiningRate)}
                       </p>
@@ -331,14 +331,14 @@ export function IncomePage() {
                     <div>
                       <p className="text-slate-500 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        <span>Days Elapsed</span>
+                        <span>Elapsed</span>
                       </p>
                       <p className="font-bold text-slate-900 tabular-nums mt-0.5">
                         {p.daysElapsed} / {p.periodDays} Days
                       </p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Remaining Days</p>
+                      <p className="text-slate-500">Days Left</p>
                       <p className="font-bold text-slate-900 tabular-nums mt-0.5">
                         {p.remainingDays} Days Left
                       </p>
@@ -347,7 +347,7 @@ export function IncomePage() {
 
                   <div className="flex items-center justify-between gap-3 pt-1">
                     <div className="text-xs">
-                      <span className="text-slate-500">Total Claimed: </span>
+                      <span className="text-slate-500">Claimed: </span>
                       <strong className="text-emerald-700 tabular-nums">
                         {formatEtb(p.totalClaimed)}
                       </strong>
@@ -385,7 +385,7 @@ export function IncomePage() {
         {/* Complete Wallet Transaction History */}
         <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-[#D71920] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold">{displayName} — Wallet Transaction History</h3>
+            <h3 className="text-sm font-bold">{displayName} — Transactions</h3>
             <div className="flex items-center gap-1 bg-white/15 p-1 rounded-full text-xs">
               {(['all', 'today', 'month'] as const).map((tab) => (
                 <button

@@ -11,7 +11,7 @@ export function AboutPage() {
   const settings = config?.settings;
 
   return (
-    <AppShell title="About The Coca-Cola Company">
+    <AppShell title="About">
       <div className="space-y-5">
         <section className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-gradient-to-r from-[#D71920] to-[#98080D] text-white p-6">
@@ -42,7 +42,7 @@ export function AboutPage() {
             <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200 flex items-center gap-3">
               <Building2 className="w-5 h-5 text-[#D71920] shrink-0" />
               <div>
-                <p className="text-xs text-slate-500">Company Name</p>
+                <p className="text-xs text-slate-500">Company</p>
                 <p className="font-bold text-slate-900">{company?.name}</p>
               </div>
             </div>
@@ -89,7 +89,7 @@ export function AboutPage() {
             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2">
               <div className="flex items-center gap-2 font-bold text-slate-900">
                 <Landmark className="w-4 h-4 text-[#D71920]" />
-                <span>Deposit Payment Methods</span>
+                <span>Deposit Methods</span>
               </div>
               {config?.activeDepositMethods && config.activeDepositMethods.length > 0 ? (
                 config.activeDepositMethods.map((m) => (
@@ -108,7 +108,7 @@ export function AboutPage() {
             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-1">
               <div className="flex items-center gap-2 font-bold text-slate-900">
                 <Landmark className="w-4 h-4 text-[#D71920]" />
-                <span>Withdrawal Payment Methods</span>
+                <span>Payout Methods</span>
               </div>
               <p className="text-slate-700">
                 {config?.activePayoutMethods && config.activePayoutMethods.length > 0
