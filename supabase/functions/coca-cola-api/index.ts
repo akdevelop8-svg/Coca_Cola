@@ -1235,14 +1235,17 @@ async function route(request: Request): Promise<Response> {
     if (submitted.length === 0) throw new ApiError("At least one plan must be supplied.", 400);
     const rows = submitted.map((plan: any) => {
       const code = String(plan.code || "").toUpperCase();
+      const name = String(plan.name || ("Plan " + code)).trim();
       const investment = Number(plan.investment);
       const dailyMining = Number(plan.dailyMining);
       const periodDays = Number(plan.periodDays);
+      const sortOrder = Number(plan.sortOrder ?? (code.charCodeAt(0) - 64));
       if (!/^[A-M]$/.test(code) || !Number.isFinite(investment) || investment <= 0 ||
           !Number.isFinite(dailyMining) || dailyMining <= 0 || !Number.isInteger(periodDays) || periodDays < 1 || periodDays > 3650) {
         throw new ApiError("Plan values must be valid positive amounts and a period from 1 to 3650 days.", 400);
       }
-      return { code, investment, daily_mining: dailyMining, period_days: periodDays, is_active: plan.isActive !== false, updated_at: nowIso() };
+      if (!name || !Number.isInteger(sortOrder) || sortOrder < 0) throw new ApiError("Plan name and sort order are required.", 400);
+      return { code, name, investment, daily_mining: dailyMining, period_days: periodDays, is_active: plan.isActive !== false, sort_order: sortOrder, updated_at: nowIso() };
     });
     if (new Set(rows.map((row: any) => row.code)).size !== rows.length) throw new ApiError("Each plan code must appear only once.", 400);
     await checked(db.from("investment_plans").upsert(rows, { onConflict: "code" }));
