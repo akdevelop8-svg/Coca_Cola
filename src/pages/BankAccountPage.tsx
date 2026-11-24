@@ -76,14 +76,14 @@ export function BankAccountPage() {
   };
 
   return (
-    <AppShell title="Bank Account Management">
+    <AppShell title="Payout Account">
       <div className="max-w-2xl mx-auto space-y-5">
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="bg-gradient-to-r from-[#D71920] to-[#A3080C] text-white px-5 py-4 flex items-center gap-3">
             <Landmark className="w-5 h-5" />
             <div>
-              <h2 className="text-base font-bold">Your Payout Account</h2>
-              <p className="text-xs text-white/85">Save or update the bank account you want to receive withdrawals into</p>
+              <h2 className="text-base font-bold">Payout Account</h2>
+              <p className="text-xs text-white/85">Manage your withdrawal account.</p>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export function BankAccountPage() {
                     </label>
                     {payoutMethods.length === 0 ? (
                       <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                        No active payout methods are currently available. Please contact Customer Service.
+                        No payout methods. Contact Support.
                       </div>
                     ) : payoutMethods.length === 1 ? (
                       <input
@@ -163,7 +163,7 @@ export function BankAccountPage() {
 
                   <div>
                     <label htmlFor="payout-owner" className="block text-xs font-semibold text-slate-700 mb-1">
-                      Account Holder Name
+                      Account Holder
                     </label>
                     <input
                       id="payout-owner"
@@ -171,7 +171,7 @@ export function BankAccountPage() {
                       autoComplete="name"
                       value={accountOwnerName}
                       onChange={(event) => setAccountOwnerName(event.target.value)}
-                      placeholder="Full name registered on your bank account"
+                      placeholder="Bank account holder name"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
                       required
                     />
@@ -188,14 +188,14 @@ export function BankAccountPage() {
                       autoComplete="off"
                       value={accountNumber}
                       onChange={(event) => setAccountNumber(event.target.value)}
-                      placeholder="Enter your bank account number"
+                      placeholder="Account number"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
                       required
                     />
                   </div>
 
                   <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
-                    Your payout account is saved immediately and is not sent for administrator approval. Administrators receive the account details only when you submit a withdrawal request.
+                    Saved immediately. No admin approval needed. Details are shared only when you request a withdrawal.
                   </div>
 
                   <button
